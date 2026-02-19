@@ -1,13 +1,12 @@
 import { Routes, Route, Link, useLocation, Navigate } from "react-router-dom";
 import { useState, useEffect, useContext } from "react";
-import { onAuthStateChanged, signOut } from "firebase/auth";
+import { signOut } from "firebase/auth";
 import { auth } from "../../firebaseConfig";
 import { AuthContext } from "./context/AuthContext";
+import type { AuthContextType } from "./context/AuthContext";
 import "./admin-panel.css";
 // @ts-ignore
 import Login from "./pages/Login";
-// @ts-ignore
-import AdminRegistration from "./pages/AdminRegistration";
 // @ts-ignore
 import Dashboard from "./pages/Dashboard";
 // @ts-ignore
@@ -110,7 +109,7 @@ interface NavItem {
 
 const DashboardLayout = () => {
   const location = useLocation();
-  const { userRole } = useContext(AuthContext);
+  const { userRole } = useContext(AuthContext) as AuthContextType;
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [expandedMenu, setExpandedMenu] = useState<string | null>(null);
   const pendingCount = usePendingAppointments();
@@ -158,6 +157,9 @@ const DashboardLayout = () => {
     "/admin/dashboard",
     "/admin/salary-analytics",
     "/admin/customers",
+    "/admin/staff",
+    "/admin/memberships",
+    "/admin/coupons",
     "/admin/hero",
     "/admin/gallery",
     "/admin/reviews",
@@ -447,7 +449,7 @@ const DashboardLayout = () => {
 };
 
 function AdminApp() {
-  const { user, loading, userRole } = useContext(AuthContext);
+  const { user, loading } = useContext(AuthContext) as AuthContextType;
 
   if (loading) {
     return (
@@ -464,7 +466,6 @@ function AdminApp() {
     <div className="admin-panel">
       <Routes>
         <Route path="login" element={<Login />} />
-        <Route path="register" element={<AdminRegistration />} />
         <Route
           path="/*"
           element={
