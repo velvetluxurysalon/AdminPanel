@@ -62,41 +62,34 @@ export const generateProfessionalBillPDF = async (invoiceData, visit) => {
     document.body.removeChild(container);
 
     const imgData = canvas.toDataURL("image/jpeg", 1.0);
-    const pdf = new jsPDF("p", "mm", "a4");
 
-    const pdfWidth = pdf.internal.pageSize.getWidth(); // 210mm
-    const pdfHeight = pdf.internal.pageSize.getHeight(); // 297mm
+    // Calculate dynamic PDF height based on canvas height
+    // Canvas width is 2048px (2x scale), so canvas height needs to be converted back
+    const originalWidth = 1024; // Original container width
+    const originalHeight = canvas.height / 2; // Convert back from 2x scale
 
-    // Calculate aspect ratio and scale to fit single page
-    const imgAspectRatio = canvas.width / canvas.height;
-    const pdfAspectRatio = pdfWidth / pdfHeight;
+    // Convert pixels to mm (assuming 96 DPI)
+    const mmPerPixel = 210 / originalWidth; // A4 width is 210mm
+    const dynamicHeightMm = originalHeight * mmPerPixel;
 
-    let imgWidth = pdfWidth;
-    let imgHeight = pdfHeight;
+    // Create custom page size that matches content height
+    const pdf = new jsPDF({
+      orientation: "p",
+      unit: "mm",
+      format: [210, Math.max(297, dynamicHeightMm)], // Use at least A4 height, but allow taller
+    });
 
-    // Adjust dimensions to maintain aspect ratio while fitting on single page
-    if (imgAspectRatio > pdfAspectRatio) {
-      // Image is wider relative to page - fit to width
-      imgWidth = pdfWidth;
-      imgHeight = pdfWidth / imgAspectRatio;
-    } else {
-      // Image is taller relative to page - fit to height
-      imgHeight = pdfHeight;
-      imgWidth = pdfHeight * imgAspectRatio;
-    }
+    const pdfWidth = 210; // A4 width in mm
+    const pdfHeight = dynamicHeightMm;
 
-    // Center the image on the page if it's smaller than page dimensions
-    const xOffset = (pdfWidth - imgWidth) / 2;
-    const yOffset = (pdfHeight - imgHeight) / 2;
-
-    // Add image to single page, always fitting within A4 dimensions
+    // Full-width image without clipping or scaling down
     pdf.addImage(
       imgData,
       "JPEG",
-      xOffset,
-      yOffset,
-      imgWidth,
-      imgHeight,
+      0, // Starting at left edge
+      0, // Starting at top edge
+      pdfWidth,
+      pdfHeight,
       null,
       "FAST",
     );
@@ -153,13 +146,12 @@ const getProfessionalBillHTML = (invoiceData, visit) => {
         
         .invoice-root {
           width: 1024px;
-          height: 1448px; /* Fixed A4 height at 1024px width */
+          height: auto; /* Dynamic height based on content */
           background: #ffffff;
           font-family: 'Inter', -apple-system, sans-serif;
           color: #0c0c0c;
           padding: 60px 80px; /* Optimized: less top/bottom padding */
           position: relative;
-          overflow: hidden; /* Prevent content from expanding beyond one page */
           display: flex;
           flex-direction: column;
         }
