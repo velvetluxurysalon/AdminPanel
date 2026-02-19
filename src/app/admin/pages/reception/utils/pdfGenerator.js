@@ -546,16 +546,14 @@ const getProfessionalBillHTML = (invoiceData, visit) => {
                     card: "Card",
                     upi: "UPI",
                     wallet: "Wallet",
+                    unknown: "Cash",
                   };
-                  const mode =
+                  const mode = (
                     invoiceData.paymentMode ||
                     invoiceData.paymentMethod ||
-                    "cash";
-                  return (
-                    paymentMap[mode?.toLowerCase()] ||
-                    mode?.toUpperCase() ||
-                    "CASH"
-                  );
+                    "cash"
+                  ).toLowerCase();
+                  return paymentMap[mode] || "Cash";
                 })()}</strong></span>
                 <span class="status-pill">${paid >= total ? "Paid" : "Partial"}</span>
               </div>

@@ -20,7 +20,7 @@ const BillOptionsModal = ({ selectedVisit, onClose }) => {
         totalAmount: selectedVisit.totalAmount,
         discountAmount: 0,
         paidAmount: selectedVisit.paidAmount || selectedVisit.totalAmount,
-        paymentMode: selectedVisit.paymentMode || "unknown",
+        paymentMode: selectedVisit.paymentMode || "cash",
         status: "paid",
       };
 
@@ -47,7 +47,7 @@ const BillOptionsModal = ({ selectedVisit, onClose }) => {
         totalAmount: selectedVisit.totalAmount,
         discountAmount: 0,
         paidAmount: selectedVisit.paidAmount || selectedVisit.totalAmount,
-        paymentMode: selectedVisit.paymentMode || "unknown",
+        paymentMode: selectedVisit.paymentMode || "cash",
         status: "paid",
       };
 
@@ -76,7 +76,7 @@ const BillOptionsModal = ({ selectedVisit, onClose }) => {
       totalAmount: selectedVisit.totalAmount,
       discountAmount: 0,
       paidAmount: selectedVisit.paidAmount || selectedVisit.totalAmount,
-      paymentMode: selectedVisit.paymentMode || "unknown",
+      paymentMode: selectedVisit.paymentMode || "cash",
       status: "paid",
     };
     const pdf = await generateProfessionalBillPDF(invoiceData, selectedVisit);
@@ -94,7 +94,7 @@ const BillOptionsModal = ({ selectedVisit, onClose }) => {
       const pdfBlob = await createPDFBlob();
       const file = new File(
         [pdfBlob],
-        `Velvet_Premium_Invoice_${selectedVisit.invoiceId || selectedVisit.customer?.name || \"Guest\"}.pdf`,
+        `Velvet_Premium_Invoice_${selectedVisit.invoiceId || selectedVisit.customer?.name || "Guest"}.pdf`,
         { type: "application/pdf" },
       );
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
@@ -120,7 +120,7 @@ const BillOptionsModal = ({ selectedVisit, onClose }) => {
               totalAmount: selectedVisit.totalAmount,
               discountAmount: 0,
               paidAmount: selectedVisit.paidAmount || selectedVisit.totalAmount,
-              paymentMode: selectedVisit.paymentMode || "unknown",
+              paymentMode: selectedVisit.paymentMode || "cash",
               status: "paid",
             },
             selectedVisit,
@@ -168,7 +168,7 @@ const BillOptionsModal = ({ selectedVisit, onClose }) => {
               totalAmount: selectedVisit.totalAmount,
               discountAmount: 0,
               paidAmount: selectedVisit.paidAmount || selectedVisit.totalAmount,
-              paymentMode: selectedVisit.paymentMode || "unknown",
+              paymentMode: selectedVisit.paymentMode || "cash",
               status: "paid",
             },
             selectedVisit,
