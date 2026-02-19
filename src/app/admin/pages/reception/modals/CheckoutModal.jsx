@@ -358,7 +358,7 @@ const CheckoutModal = ({
 
   const generateBillTextForShare = () => {
     const balance = Math.max(0, totalAmount - (parseFloat(amountPaid) || 0));
-    let text = `*VELVET LUXURY SALON - INVOICE*\n\n`;
+    let text = `*VELVET PREMIUM UNISEX SALON - INVOICE*\n\n`;
     text += `👤 Customer: ${visit.customer?.name || visit.customerName}\n`;
     text += `📱 Phone: ${visit.customer?.phone || visit.customer?.contactNo || visit.customerPhone}\n`;
     text += `📧 Email: ${visit.customer?.email || visit.customerEmail || "N/A"}\n`;
@@ -385,7 +385,7 @@ const CheckoutModal = ({
     }
     text += `💳 Payment: ${paymentMethod.toUpperCase()}\n`;
     text += `\n━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-    text += `✨ Thank you for choosing Velvet Luxury Salon!\n`;
+    text += `✨ Thank you for choosing Velvet Premium Unisex Salon!\n`;
     text += `📞 For queries: 9345678646\n`;
     text += `✉️ Velvetluxurysalon@gmail.com\n`;
     text += `🕐 Working Hours: 8:00 AM - 9:00 PM`;
@@ -398,6 +398,7 @@ const CheckoutModal = ({
       // Use existing invoiceData from state if available (after payment completion)
       // Otherwise, create a new one (for print before payment - though this shouldn't normally happen)
       const pdfInvoiceData = invoiceData || {
+        invoiceId: invoiceData?.invoiceId, // Ensure invoiceId is included
         visitId: visit.id,
         customerId: visit.customerId,
         customerName: visit.customer?.name,
@@ -427,6 +428,7 @@ const CheckoutModal = ({
       // Use existing invoiceData from state if available (after payment completion)
       // Otherwise, create a new one (for download before payment - though this shouldn't normally happen)
       const pdfInvoiceData = invoiceData || {
+        invoiceId: invoiceData?.invoiceId, // Ensure invoiceId is included
         visitId: visit.id,
         customerId: visit.customerId,
         customerName: visit.customer?.name,
@@ -445,7 +447,7 @@ const CheckoutModal = ({
       const pdf = await generateProfessionalBillPDF(pdfInvoiceData, visit);
       downloadPDF(
         pdf,
-        `Velvet_Luxury_Salon_Invoice_${pdfInvoiceData.invoiceId || visit.customer?.name || "Guest"}_${new Date().getTime()}.pdf`,
+        `Velvet_Premium_Invoice_${pdfInvoiceData.invoiceId || visit.customer?.name || "Guest"}_${new Date().getTime()}.pdf`,
       );
     } catch (error) {
       console.error("Error generating PDF:", error);
@@ -458,6 +460,7 @@ const CheckoutModal = ({
     // Use existing invoiceData from state if available (after payment completion)
     // Otherwise, create a new one (for share before payment - though this shouldn't normally happen)
     const pdfInvoiceData = invoiceData || {
+      invoiceId: invoiceData?.invoiceId, // Ensure invoiceId is included
       visitId: visit.id,
       customerId: visit.customerId,
       customerName: visit.customer?.name,
@@ -493,7 +496,7 @@ const CheckoutModal = ({
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
         await navigator.share({
           files: [file],
-          title: "Velvet Luxury Salon Invoice",
+          title: "Velvet Premium Unisex Salon Invoice",
           text: "Please find your invoice attached.",
         });
       } else {
@@ -536,7 +539,7 @@ const CheckoutModal = ({
         { type: "application/pdf" },
       );
       const email = visit.customer?.email || "";
-      const subject = `Invoice from Velvet Luxury Salon - ${new Date().toLocaleDateString()}`;
+      const subject = `Invoice from Velvet Premium Unisex Salon - ${new Date().toLocaleDateString()}`;
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
         await navigator.share({
           files: [file],

@@ -4,15 +4,17 @@
 
 export const generateInvoiceHTML = (invoice) => {
   const itemsHTML = invoice.items
-    .map(item => `
+    .map(
+      (item) => `
       <tr>
         <td style="padding: 10px; border-bottom: 1px solid #ddd;">${item.name}</td>
         <td style="padding: 10px; border-bottom: 1px solid #ddd; text-align: center;">${item.quantity}</td>
         <td style="padding: 10px; border-bottom: 1px solid #ddd; text-align: right;">₹${item.price.toFixed(2)}</td>
         <td style="padding: 10px; border-bottom: 1px solid #ddd; text-align: right;">₹${(item.price * item.quantity).toFixed(2)}</td>
       </tr>
-    `)
-    .join('');
+    `,
+    )
+    .join("");
 
   return `
     <!DOCTYPE html>
@@ -38,7 +40,7 @@ export const generateInvoiceHTML = (invoice) => {
     <body>
       <div class="invoice-container">
         <div class="header">
-          <h1>Velvet Luxury Salon</h1>
+          <h1>Velvet Premium Unisex Salon</h1>
           <p class="salon-info">Kalingarayanpalayam, Bhavani<br>Erode District, Tamil Nadu - 638301<br>Contact: 9667722611</p>
         </div>
 
@@ -78,7 +80,7 @@ export const generateInvoiceHTML = (invoice) => {
 
         <div style="text-align: right; margin: 20px 0;">
           <p><strong>Status:</strong> 
-            <span class="${invoice.status === 'paid' ? 'status-paid' : 'status-pending'}">
+            <span class="${invoice.status === "paid" ? "status-paid" : "status-pending"}">
               ${invoice.status.toUpperCase()}
             </span>
           </p>
@@ -96,13 +98,13 @@ export const generateInvoiceHTML = (invoice) => {
 
 export const downloadInvoicePDF = (invoice) => {
   // This would require a PDF library like jsPDF
-  console.log('PDF download functionality requires jsPDF library');
-  console.log('Invoice:', invoice);
+  console.log("PDF download functionality requires jsPDF library");
+  console.log("Invoice:", invoice);
 };
 
 export const printInvoice = (invoice) => {
   const html = generateInvoiceHTML(invoice);
-  const printWindow = window.open('', '', 'width=800,height=600');
+  const printWindow = window.open("", "", "width=800,height=600");
   printWindow.document.write(html);
   printWindow.document.close();
   printWindow.print();
@@ -112,9 +114,9 @@ export const copyInvoiceToClipboard = async (invoice) => {
   const html = generateInvoiceHTML(invoice);
   try {
     await navigator.clipboard.writeText(html);
-    return { success: true, message: 'Invoice copied to clipboard' };
+    return { success: true, message: "Invoice copied to clipboard" };
   } catch (error) {
-    return { success: false, error: 'Failed to copy invoice' };
+    return { success: false, error: "Failed to copy invoice" };
   }
 };
 
@@ -123,40 +125,42 @@ export const copyInvoiceToClipboard = async (invoice) => {
 export const sendInvoiceEmail = async (invoice) => {
   // In production, this would call a Firebase Cloud Function
   // that uses Nodemailer to send the actual email
-  
+
   const emailContent = {
     to: invoice.customerEmail,
-    subject: `Invoice #${invoice.id} - Velvet Luxury Salon`,
+    subject: `Invoice #${invoice.id} - Velvet Premium Unisex Salon`,
     html: generateInvoiceHTML(invoice),
     customerName: invoice.customerName,
-    invoiceId: invoice.id
+    invoiceId: invoice.id,
   };
 
   // Log for debugging
-  console.log('Email to be sent:', emailContent);
-  
+  console.log("Email to be sent:", emailContent);
+
   // For now, return success (in production, call cloud function)
-  return { 
-    success: true, 
-    message: 'Invoice email prepared (Cloud Function needed for actual delivery)',
-    email: emailContent 
+  return {
+    success: true,
+    message:
+      "Invoice email prepared (Cloud Function needed for actual delivery)",
+    email: emailContent,
   };
 };
 
 export const sendReceiptEmail = async (invoice, paymentDetails) => {
   const receiptContent = {
     to: invoice.customerEmail,
-    subject: `Receipt #${invoice.id} - Velvet Luxury Salon`,
+    subject: `Receipt #${invoice.id} - Velvet Premium Unisex Salon`,
     html: generateInvoiceHTML(invoice),
     paymentMethod: paymentDetails.paymentMethod,
-    paymentDate: paymentDetails.paymentDate
+    paymentDate: paymentDetails.paymentDate,
   };
 
-  console.log('Receipt to be sent:', receiptContent);
-  
-  return { 
-    success: true, 
-    message: 'Receipt email prepared (Cloud Function needed for actual delivery)',
-    email: receiptContent 
+  console.log("Receipt to be sent:", receiptContent);
+
+  return {
+    success: true,
+    message:
+      "Receipt email prepared (Cloud Function needed for actual delivery)",
+    email: receiptContent,
   };
 };

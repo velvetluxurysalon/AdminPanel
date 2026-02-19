@@ -2,7 +2,7 @@ import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 
 /**
- * Generates a world-class premium PDF bill for Velvet Luxury Salon.
+ * Generates a world-class premium PDF bill for Velvet Premium Unisex Salon.
  * Optimized for full A4 page width without clipping or blank margins.
  */
 export const generateProfessionalBillPDF = async (invoiceData, visit) => {
@@ -268,13 +268,13 @@ const getProfessionalBillHTML = (invoiceData, visit) => {
 
         .status-pill {
           display: inline-block;
-          padding: 6px 15px;
+          padding: 4px 12px;
           border-radius: 50px;
-          font-size: 11px;
+          font-size: 10px;
           font-weight: 800;
           text-transform: uppercase;
-          letter-spacing: 1.5px;
-          margin-top: 15px;
+          letter-spacing: 1px;
+          white-space: nowrap;
           ${
             paid >= total
               ? "background: #000; color: #fff;"
@@ -503,9 +503,9 @@ const getProfessionalBillHTML = (invoiceData, visit) => {
         <div class="header">
           <div class="brand-section">
             <div class="logo-box">
-              <img src="/velvet_logo.png" alt="Velvet Luxury Salon" onerror="this.style.visibility='hidden'">
+              <img src="/velvet_logo.png" alt="Velvet Premium Unisex Salon" onerror="this.style.visibility='hidden'">
             </div>
-             <span class="salon-tag">Luxury Salon & Spa</span>
+             <span class="salon-tag">Premium Unisex Salon</span>
            
               </div>
           <div class="receipt-section">
@@ -539,10 +539,27 @@ const getProfessionalBillHTML = (invoiceData, visit) => {
           <div class="info-col">
             <h3>Payment Information</h3>
             <div class="info-content">
-              Receipt Number: <strong>${visit.id?.slice(-8).toUpperCase()}</strong>
-              Payment Method: ${invoiceData.paymentMode?.toUpperCase() || "CASH"}<br>
-              Status: <span class="status-pill">${paid >= total ? "Paid" : "Partial"}</span>
-              ${invoiceData.discountType === "membership" && visit.customer?.membershipType && visit.customer?.membershipType !== "regular" ? '<br><span style="color: #fb923c; font-weight: 700;">✓ Member Discount</span>' : ""}
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <span>Payment: <strong>${(() => {
+                  const paymentMap = {
+                    cash: "Cash",
+                    card: "Card",
+                    upi: "UPI",
+                    wallet: "Wallet",
+                  };
+                  const mode =
+                    invoiceData.paymentMode ||
+                    invoiceData.paymentMethod ||
+                    "cash";
+                  return (
+                    paymentMap[mode?.toLowerCase()] ||
+                    mode?.toUpperCase() ||
+                    "CASH"
+                  );
+                })()}</strong></span>
+                <span class="status-pill">${paid >= total ? "Paid" : "Partial"}</span>
+              </div>
+              ${invoiceData.discountType === "membership" && visit.customer?.membershipType && visit.customer?.membershipType !== "regular" ? '<span style="color: #fb923c; font-weight: 700;">✓ Member Discount</span>' : ""}
               ${invoiceData.couponCode ? '<br><span style="color: #10b981; font-weight: 700;">🎟️ Coupon: ' + invoiceData.couponCode + " Applied</span>" : ""}
             </div>
           </div>
@@ -633,7 +650,7 @@ const getProfessionalBillHTML = (invoiceData, visit) => {
 
         <div class="membership-banner">
           <div class="banner-text">
-            <h4>Experience the Velvet Touch</h4>
+            <h4>Experience Premium Care</h4>
             <p>Elevate your lifestyle. Book appointments and explore<br>exclusive services through our digital boutique.</p>
           </div>
           <div class="banner-link">
@@ -646,11 +663,11 @@ const getProfessionalBillHTML = (invoiceData, visit) => {
           <div class="salon-info">
             Opposite ICICI Bank, Bharathi Nagar<br>
             Bhavani, Erode, Tamil Nadu 638301<br>
-            Direct: +91 93456 78646
+            Direct: +91 96677 22611
           </div>
           <div class="thanks-section">
             <div class="thanks-msg">Thank You</div>
-            <div class="legal-tag">Velvet Luxury Salon</div>
+            <div class="legal-tag">Velvet Premium Unisex Salon</div>
           </div>
         </div>
       </div>

@@ -196,9 +196,7 @@ const DashboardLayout = () => {
             {isSidebarOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
           <div className="header-title-section">
-            <h1 className="header-page-title">
-              Velvet Luxury Salon - Premium Beauty
-            </h1>
+            <h1 className="header-page-title">Velvet Premium Unisex Salon</h1>
           </div>
         </div>
         <div className="sidebar-logo">S</div>

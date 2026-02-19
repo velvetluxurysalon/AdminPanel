@@ -2831,7 +2831,7 @@ export const generateBillHTML = (invoice, customerData) => {
       </head>
       <body>
         <div class="header">
-          <div class="title">VELVET LUXURY SALON</div>
+          <div class="title">VELVET PREMIUM UNISEX SALON</div>
           <div class="invoice-id">Invoice #${invoice.id}</div>
           <div style="color: #999; margin-top: 5px;">Date: ${date.toLocaleDateString()}</div>
         </div>
@@ -2868,7 +2868,7 @@ export const generateBillHTML = (invoice, customerData) => {
         </div>
 
         <div class="footer">
-          <p>Thank you for choosing Velvet Luxury Salon!</p>
+          <p>Thank you for choosing Velvet Premium Unisex Salon!</p>
           <p>Opposite to ICICI bank, Bharathi Nagar, Kalingarayanpalayam, Bhavani, Erode Dt, Tamil Nadu - 638301</p>
           <p>For queries, contact us at Velvetluxurysalon@gmail.com | 9345678646</p>
           <p>Working Hours: 8:00 AM - 9:00 PM</p>
