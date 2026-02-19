@@ -555,7 +555,7 @@ const getProfessionalBillHTML = (invoiceData, visit) => {
                   ).toLowerCase();
                   return paymentMap[mode] || "Cash";
                 })()}</strong></span>
-                <span class="status-pill">${paid >= total ? "Paid" : "Partial"}</span>
+                ${paid >= total ? '<span class="status-pill">Paid</span>' : ""}
               </div>
               ${invoiceData.discountType === "membership" && visit.customer?.membershipType && visit.customer?.membershipType !== "regular" ? '<span style="color: #fb923c; font-weight: 700;">✓ Member Discount</span>' : ""}
               ${invoiceData.couponCode ? '<br><span style="color: #10b981; font-weight: 700;">🎟️ Coupon: ' + invoiceData.couponCode + " Applied</span>" : ""}
