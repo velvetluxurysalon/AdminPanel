@@ -1,18 +1,73 @@
-import React, { useState } from "react";
-import { Download, Printer, Mail, MessageCircle, X } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import {
+  Download,
+  Printer,
+  Mail,
+  MessageCircle,
+  X,
+  CheckCircle,
+} from "lucide-react";
 import {
   generateProfessionalBillPDF,
   downloadPDF,
   prepareInvoiceDataFromVisit,
 } from "../utils/pdfGenerator";
 import { openWhatsAppDirect } from "../../../services/whatsappService";
+import { getDocument } from "../../../utils/firebaseUtils";
 
 const BillOptionsModal = ({ selectedVisit, onClose }) => {
+  const [invoiceData, setInvoiceData] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch invoice data from Firestore
+  useEffect(() => {
+    const fetchInvoiceData = async () => {
+      try {
+        if (selectedVisit.invoiceId) {
+          const invoice = await getDocument(
+            "invoices",
+            selectedVisit.invoiceId,
+          );
+          if (invoice) {
+            setInvoiceData(invoice);
+            console.log("📄 Invoice data loaded:", invoice);
+          }
+        }
+        setLoading(false);
+      } catch (error) {
+        console.error("Error fetching invoice:", error);
+        setLoading(false);
+      }
+    };
+
+    fetchInvoiceData();
+  }, [selectedVisit.invoiceId]);
+
+  // Use invoice data if available, otherwise fall back to visit data
+  const displayData = invoiceData || selectedVisit;
+
+  // Calculate totals - prefer invoice data first
+  const subtotal =
+    displayData.subtotal ||
+    displayData.items?.reduce(
+      (sum, item) => sum + item.price * (item.quantity || 1),
+      0,
+    ) ||
+    0;
+  const discountAmount = displayData.discountAmount || 0;
+  const totalAmount =
+    displayData.totalAmount || Math.max(0, subtotal - discountAmount);
+  const paidAmount = displayData.paidAmount || totalAmount;
+  const balance = Math.max(0, totalAmount - paidAmount);
+
   const handlePrintBill = async () => {
     try {
-      const invoiceData = prepareInvoiceDataFromVisit(selectedVisit);
+      const pdfInvoiceData = prepareInvoiceDataFromVisit(selectedVisit);
 
-      const pdf = await generateProfessionalBillPDF(invoiceData, selectedVisit);
+      const pdf = await generateProfessionalBillPDF(
+        pdfInvoiceData,
+        selectedVisit,
+      );
       pdf.autoPrint();
       window.open(pdf.output("bloburi"), "_blank");
     } catch (error) {
@@ -23,12 +78,15 @@ const BillOptionsModal = ({ selectedVisit, onClose }) => {
 
   const handleDownloadBill = async () => {
     try {
-      const invoiceData = prepareInvoiceDataFromVisit(selectedVisit);
+      const pdfInvoiceData = prepareInvoiceDataFromVisit(selectedVisit);
 
-      const pdf = await generateProfessionalBillPDF(invoiceData, selectedVisit);
+      const pdf = await generateProfessionalBillPDF(
+        pdfInvoiceData,
+        selectedVisit,
+      );
       downloadPDF(
         pdf,
-        `Velvet_Premium_Invoice_${invoiceData.invoiceId || selectedVisit.customer?.name || "Guest"}_${new Date().getTime()}.pdf`,
+        `Velvet_Premium_Invoice_${pdfInvoiceData.invoiceId || selectedVisit.customer?.name || "Guest"}_${new Date().getTime()}.pdf`,
       );
     } catch (error) {
       console.error("Error generating PDF:", error);
@@ -38,8 +96,11 @@ const BillOptionsModal = ({ selectedVisit, onClose }) => {
 
   // Helper to create PDF Blob
   const createPDFBlob = async () => {
-    const invoiceData = prepareInvoiceDataFromVisit(selectedVisit);
-    const pdf = await generateProfessionalBillPDF(invoiceData, selectedVisit);
+    const pdfInvoiceData = prepareInvoiceDataFromVisit(selectedVisit);
+    const pdf = await generateProfessionalBillPDF(
+      pdfInvoiceData,
+      selectedVisit,
+    );
     return pdf.output("blob");
   };
 
@@ -60,10 +121,10 @@ const BillOptionsModal = ({ selectedVisit, onClose }) => {
       console.log("📱 [BillOptionsModal] Opening WhatsApp for:", phone);
 
       // Prepare invoice data
-      const invoiceData = prepareInvoiceDataFromVisit(selectedVisit);
+      const pdfInvoiceData = prepareInvoiceDataFromVisit(selectedVisit);
 
       // Open WhatsApp directly with formatted message
-      const result = openWhatsAppDirect(phone, invoiceData);
+      const result = openWhatsAppDirect(phone, pdfInvoiceData);
 
       if (!result.success) {
         alert("Error: " + result.message);
@@ -93,9 +154,9 @@ const BillOptionsModal = ({ selectedVisit, onClose }) => {
         });
       } else {
         // Fallback: download PDF and open mailto
-        const invoiceData = prepareInvoiceDataFromVisit(selectedVisit);
+        const pdfInvoiceData = prepareInvoiceDataFromVisit(selectedVisit);
         downloadPDF(
-          await generateProfessionalBillPDF(invoiceData, selectedVisit),
+          await generateProfessionalBillPDF(pdfInvoiceData, selectedVisit),
           `Velvet_Premium_Invoice_${selectedVisit.invoiceId || selectedVisit.customer?.name || "Guest"}.pdf`,
         );
         const mailtoLink = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent("Please find your invoice attached as PDF.")}`;
@@ -107,30 +168,6 @@ const BillOptionsModal = ({ selectedVisit, onClose }) => {
     }
   };
 
-  const generateSimpleTextBill = () => {
-    let text = `VELVET PREMIUM UNISEX SALON - INVOICE\n\n`;
-    text += `Customer: ${selectedVisit.customer?.name}\n`;
-    text += `Phone: ${selectedVisit.customer?.contactNo || selectedVisit.customer?.phone}\n`;
-    text += `Email: ${selectedVisit.customer?.email || "N/A"}\n`;
-    text += `Date: ${new Date().toLocaleDateString("en-IN")}\n\n`;
-    text += `SERVICES & PRODUCTS:\n`;
-    text += `${"-".repeat(50)}\n`;
-
-    selectedVisit.items?.forEach((item) => {
-      text += `${item.name} x${item.quantity} = ₹${(item.price * item.quantity).toFixed(2)}\n`;
-    });
-
-    text += `${"-".repeat(50)}\n`;
-    text += `Subtotal:        ₹${selectedVisit.totalAmount?.toFixed(2)}\n`;
-    text += `${"-".repeat(50)}\n`;
-    text += `Total:           ₹${selectedVisit.totalAmount?.toFixed(2)}\n`;
-    text += `Amount Paid:     ₹${(selectedVisit.paidAmount || selectedVisit.totalAmount)?.toFixed(2)}\n`;
-    text += `${"-".repeat(50)}\n`;
-    text += `Thank you for choosing Velvet Premium Unisex Salon!\n`;
-
-    return text;
-  };
-
   return (
     <div
       style={{
@@ -139,7 +176,7 @@ const BillOptionsModal = ({ selectedVisit, onClose }) => {
         left: 0,
         right: 0,
         bottom: 0,
-        background: "rgba(0, 0, 0, 0.6)",
+        background: "rgba(0, 0, 0, 0.5)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -151,75 +188,236 @@ const BillOptionsModal = ({ selectedVisit, onClose }) => {
         style={{
           background: "white",
           borderRadius: "1rem",
-          padding: "2rem",
+          padding: "2.5rem",
           maxWidth: "500px",
           width: "90%",
-          boxShadow: "0 20px 25px rgba(0, 0, 0, 0.15)",
-          animation: "slideInScale 0.4s ease-out",
+          boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1)",
+          textAlign: "center",
+          maxHeight: "90vh",
+          overflowY: "auto",
         }}
       >
-        <style>{`
-          @keyframes slideInScale {
-            from {
-              opacity: 0;
-              transform: scale(0.95) translateY(-20px);
-            }
-            to {
-              opacity: 1;
-              transform: scale(1) translateY(0);
-            }
-          }
-          @keyframes spin {
-            from {
-              transform: rotate(0deg);
-            }
-            to {
-              transform: rotate(360deg);
-            }
-          }
-        `}</style>
-
+        {/* SUCCESS ICON */}
         <div
           style={{
+            width: "60px",
+            height: "60px",
+            background: "#f0fdf4",
+            borderRadius: "50%",
             display: "flex",
-            justifyContent: "space-between",
             alignItems: "center",
-            marginBottom: "1.5rem",
+            justifyContent: "center",
+            margin: "0 auto 1.5rem",
+            color: "#16a34a",
           }}
         >
-          <h2
-            style={{
-              color: "#1f2937",
-              marginBottom: 0,
-              fontSize: "1.5rem",
-              fontWeight: "700",
-            }}
-          >
-            Bill Options
-          </h2>
-          <button
-            onClick={onClose}
-            style={{
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-              color: "#6b7280",
-              padding: 0,
-            }}
-          >
-            <X size={24} />
-          </button>
+          <CheckCircle size={32} />
         </div>
 
+        <h2
+          style={{
+            color: "#111827",
+            marginBottom: "0.5rem",
+            fontSize: "1.5rem",
+            fontWeight: "700",
+          }}
+        >
+          View Invoice
+        </h2>
         <p
           style={{
             color: "#6b7280",
-            marginBottom: "2rem",
-            fontSize: "0.95rem",
+            marginBottom: "1.5rem",
+            fontSize: "1rem",
           }}
         >
-          Choose how you want to manage your invoice
+          {selectedVisit.customer?.name || selectedVisit.customerName}
         </p>
+
+        {/* INVOICE DETAILS SECTION */}
+        <div
+          style={{
+            background: "#f9fafb",
+            borderRadius: "0.75rem",
+            padding: "1.5rem",
+            marginBottom: "2rem",
+            textAlign: "left",
+            border: "1px solid #e5e7eb",
+          }}
+        >
+          {/* Items List */}
+          {selectedVisit.items && selectedVisit.items.length > 0 && (
+            <>
+              <h3
+                style={{
+                  fontSize: "0.875rem",
+                  fontWeight: "600",
+                  color: "#374151",
+                  marginBottom: "1rem",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.03em",
+                }}
+              >
+                Services & Products
+              </h3>
+              <div
+                style={{
+                  borderBottom: "1px solid #e5e7eb",
+                  paddingBottom: "1rem",
+                  marginBottom: "1rem",
+                }}
+              >
+                {selectedVisit.items.map((item, index) => (
+                  <div
+                    key={index}
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      marginBottom: "0.5rem",
+                      fontSize: "0.925rem",
+                    }}
+                  >
+                    <span style={{ color: "#374151" }}>
+                      {item.name} x{item.quantity || 1}
+                    </span>
+                    <span style={{ color: "#111827", fontWeight: "600" }}>
+                      ₹{(item.price * (item.quantity || 1)).toFixed(2)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
+          {/* Subtotal */}
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              marginBottom: "0.75rem",
+              fontSize: "0.925rem",
+              color: "#6b7280",
+            }}
+          >
+            <span>Subtotal</span>
+            <span>₹{subtotal.toFixed(2)}</span>
+          </div>
+
+          {/* Discount */}
+          {discountAmount > 0 && (
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                marginBottom: "0.75rem",
+                fontSize: "0.925rem",
+                color: "#dc2626",
+              }}
+            >
+              <span>
+                {displayData.discountType === "coupon"
+                  ? `Coupon (${displayData.couponCode || "Applied"})`
+                  : displayData.discountType === "percentage"
+                    ? "Percentage Discount"
+                    : displayData.discountType === "membership"
+                      ? "Membership Discount"
+                      : displayData.discountType === "coins"
+                        ? "Loyalty Points Discount"
+                        : "Discount"}
+              </span>
+              <span>-₹{discountAmount.toFixed(2)}</span>
+            </div>
+          )}
+
+          {/* Total */}
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              paddingTop: "1rem",
+              borderTop: "2px solid #e5e7eb",
+              fontSize: "1.125rem",
+              fontWeight: "700",
+              color: "#111827",
+            }}
+          >
+            <span>TOTAL</span>
+            <span>₹{totalAmount.toFixed(2)}</span>
+          </div>
+
+          {/* Payment Status */}
+          <div
+            style={{
+              marginTop: "1rem",
+              paddingTop: "1rem",
+              borderTop: "1px solid #e5e7eb",
+              fontSize: "0.9rem",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                marginBottom: "0.5rem",
+              }}
+            >
+              <span style={{ color: "#6b7280" }}>Paid Amount</span>
+              <span
+                style={{
+                  color: "#16a34a",
+                  fontWeight: "600",
+                }}
+              >
+                ₹{paidAmount.toFixed(2)}
+              </span>
+            </div>
+            {balance > 0 && (
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                }}
+              >
+                <span style={{ color: "#6b7280" }}>Balance Due</span>
+                <span
+                  style={{
+                    color: "#dc2626",
+                    fontWeight: "600",
+                  }}
+                >
+                  ₹{balance.toFixed(2)}
+                </span>
+              </div>
+            )}
+            {balance === 0 && (
+              <div
+                style={{
+                  color: "#16a34a",
+                  fontWeight: "600",
+                  fontSize: "0.85rem",
+                }}
+              >
+                ✓ PAID IN FULL
+              </div>
+            )}
+          </div>
+
+          {/* Show if loading invoice data */}
+          {loading && (
+            <div
+              style={{
+                marginTop: "1rem",
+                paddingTop: "1rem",
+                borderTop: "1px solid #e5e7eb",
+                fontSize: "0.85rem",
+                color: "#9ca3af",
+                fontStyle: "italic",
+              }}
+            >
+              Loading complete invoice details...
+            </div>
+          )}
+        </div>
 
         {/* ACTION BUTTONS */}
         <div
@@ -227,7 +425,7 @@ const BillOptionsModal = ({ selectedVisit, onClose }) => {
             display: "grid",
             gridTemplateColumns: "1fr 1fr",
             gap: "0.75rem",
-            marginBottom: "1rem",
+            marginBottom: "1.5rem",
           }}
         >
           <button
@@ -237,19 +435,15 @@ const BillOptionsModal = ({ selectedVisit, onClose }) => {
               alignItems: "center",
               justifyContent: "center",
               gap: "0.5rem",
-              padding: "0.75rem 1rem",
-              background: "#3b82f6",
-              color: "white",
-              border: "none",
+              padding: "0.75rem",
+              background: "#f9fafb",
+              color: "#374151",
+              border: "1px solid #e5e7eb",
               borderRadius: "0.5rem",
               fontWeight: "600",
+              fontSize: "0.875rem",
               cursor: "pointer",
-              transition: "all 0.2s",
-              fontSize: "0.9rem",
             }}
-            onMouseEnter={(e) => (e.target.style.background = "#2563eb")}
-            onMouseLeave={(e) => (e.target.style.background = "#3b82f6")}
-            title="Print Bill"
           >
             <Printer size={18} /> Print
           </button>
@@ -260,19 +454,15 @@ const BillOptionsModal = ({ selectedVisit, onClose }) => {
               alignItems: "center",
               justifyContent: "center",
               gap: "0.5rem",
-              padding: "0.75rem 1rem",
-              background: "#8b5cf6",
-              color: "white",
-              border: "none",
+              padding: "0.75rem",
+              background: "#f9fafb",
+              color: "#374151",
+              border: "1px solid #e5e7eb",
               borderRadius: "0.5rem",
               fontWeight: "600",
+              fontSize: "0.875rem",
               cursor: "pointer",
-              transition: "all 0.2s",
-              fontSize: "0.9rem",
             }}
-            onMouseEnter={(e) => (e.target.style.background = "#7c3aed")}
-            onMouseLeave={(e) => (e.target.style.background = "#8b5cf6")}
-            title="Download as PDF"
           >
             <Download size={18} /> Download
           </button>
@@ -283,19 +473,15 @@ const BillOptionsModal = ({ selectedVisit, onClose }) => {
               alignItems: "center",
               justifyContent: "center",
               gap: "0.5rem",
-              padding: "0.75rem 1rem",
-              background: "#25d366",
-              color: "white",
-              border: "none",
+              padding: "0.75rem",
+              background: "#f9fafb",
+              color: "#16a34a",
+              border: "1px solid #e5e7eb",
               borderRadius: "0.5rem",
               fontWeight: "600",
+              fontSize: "0.875rem",
               cursor: "pointer",
-              transition: "all 0.2s",
-              fontSize: "0.9rem",
             }}
-            onMouseEnter={(e) => (e.target.style.background = "#20ba58")}
-            onMouseLeave={(e) => (e.target.style.background = "#25d366")}
-            title="Open WhatsApp with bill details"
           >
             <MessageCircle size={18} /> WhatsApp
           </button>
@@ -306,19 +492,15 @@ const BillOptionsModal = ({ selectedVisit, onClose }) => {
               alignItems: "center",
               justifyContent: "center",
               gap: "0.5rem",
-              padding: "0.75rem 1rem",
-              background: "#f59e0b",
-              color: "white",
-              border: "none",
+              padding: "0.75rem",
+              background: "#f9fafb",
+              color: "#f59e0b",
+              border: "1px solid #e5e7eb",
               borderRadius: "0.5rem",
               fontWeight: "600",
+              fontSize: "0.875rem",
               cursor: "pointer",
-              transition: "all 0.2s",
-              fontSize: "0.9rem",
             }}
-            onMouseEnter={(e) => (e.target.style.background = "#d97706")}
-            onMouseLeave={(e) => (e.target.style.background = "#f59e0b")}
-            title="Send via Email"
           >
             <Mail size={18} /> Email
           </button>
@@ -328,19 +510,15 @@ const BillOptionsModal = ({ selectedVisit, onClose }) => {
           onClick={onClose}
           style={{
             width: "100%",
-            padding: "0.75rem 1.5rem",
-            background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+            padding: "0.875rem",
+            background: "#111827",
             color: "white",
             border: "none",
             borderRadius: "0.5rem",
             fontWeight: "600",
+            fontSize: "1rem",
             cursor: "pointer",
-            transition: "all 0.2s",
           }}
-          onMouseEnter={(e) =>
-            (e.target.style.boxShadow = "0 4px 12px rgba(16, 185, 129, 0.3)")
-          }
-          onMouseLeave={(e) => (e.target.style.boxShadow = "none")}
         >
           Close
         </button>

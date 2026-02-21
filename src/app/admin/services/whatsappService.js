@@ -235,10 +235,20 @@ export const sendWhatsAppMessage = async (phoneNumber, message) => {
  * @returns {string} Formatted WhatsApp message
  */
 export const formatBillMessage = (billData) => {
-  const balance = Math.max(
-    0,
-    (billData.totalAmount || 0) - (billData.paidAmount || 0),
-  );
+  // Calculate subtotal from items if not provided or is 0
+  let calculatedSubtotal = billData.subtotal || 0;
+  if (calculatedSubtotal === 0 && billData.items && billData.items.length > 0) {
+    calculatedSubtotal = billData.items.reduce((sum, item) => {
+      return sum + item.price * (item.quantity || 1);
+    }, 0);
+  }
+
+  // Use provided totalAmount or calculate from subtotal minus discount
+  const discountAmount = billData.discountAmount || 0;
+  const calculatedTotal =
+    billData.totalAmount || Math.max(0, calculatedSubtotal - discountAmount);
+
+  const balance = Math.max(0, calculatedTotal - (billData.paidAmount || 0));
 
   let text = `*✨ VELVET PREMIUM UNISEX SALON - INVOICE ✨*\n\n`;
   text += `👤 *Customer:* ${billData.customerName || "Valued Guest"}\n`;
@@ -257,16 +267,16 @@ export const formatBillMessage = (billData) => {
   }
 
   text += `\n━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-  text += `💰 *Subtotal:* ₹${(billData.subtotal || 0).toFixed(2)}\n`;
+  text += `💰 *Subtotal:* ₹${calculatedSubtotal.toFixed(2)}\n`;
 
-  if ((billData.discountAmount || 0) > 0) {
-    text += `✂️ *Discount:* -₹${(billData.discountAmount || 0).toFixed(2)}\n`;
+  if (discountAmount > 0) {
+    text += `✂️ *Discount:* -₹${discountAmount.toFixed(2)}\n`;
   }
 
-  text += `\n*🎯 TOTAL: ₹${(billData.totalAmount || 0).toFixed(2)}*\n`;
+  text += `\n*🎯 TOTAL: ₹${calculatedTotal.toFixed(2)}*\n`;
   text += `✅ *Amount Paid:* ₹${(billData.paidAmount || 0).toFixed(2)}\n`;
 
-  if (balance > 0) {
+  if (balance > 0.01) {
     text += `⏳ *Balance Due:* ₹${balance.toFixed(2)}\n`;
   } else {
     text += `✓ *Status:* ✅ PAID IN FULL\n`;

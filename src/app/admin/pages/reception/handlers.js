@@ -209,22 +209,37 @@ export const handleCompletePayment = async (
       customerName: invoiceData.customerName,
       customerEmail: invoiceData.customerEmail,
       totalAmount: invoiceData.totalAmount,
+      discountAmount: invoiceData.discountAmount,
+      discountType: invoiceData.discountType,
+      couponCode: invoiceData.couponCode,
     });
 
     await createInvoice(invoiceData);
 
-    // Update visit with all billing details and complete status
+    // Update visit with ALL billing details and complete status
+    // CRITICAL: Store totalAmount as the final discounted amount (not subtotal)
     await updateVisit(invoiceData.visitId, {
       paidAmount: parseFloat(invoiceData.paidAmount) || 0,
       status: "COMPLETED",
       subtotal: invoiceData.subtotal || 0,
+      totalAmount: invoiceData.totalAmount || 0, // This should be after-discount amount
       discountAmount: invoiceData.discountAmount || 0,
       discountType: invoiceData.discountType || "none",
+      discountPercent: invoiceData.discountPercent || 0, // For percentage-based discounts
       paymentMode: invoiceData.paymentMode || "cash",
+
+      // ALL coupon and discount details
       couponCode: invoiceData.couponCode || null,
+      couponIsCapped: invoiceData.couponIsCapped || false,
+      couponOriginalDiscount: invoiceData.couponOriginalDiscount || 0,
+      couponAppliedDiscount: invoiceData.couponAppliedDiscount || 0,
+
+      // Loyalty points
       pointsUsed: invoiceData.pointsUsed || 0,
+      pointsDiscountAmount: invoiceData.pointsDiscountAmount || 0,
+      loyaltyPointsEarned: invoiceData.loyaltyPointsEarned || 0,
+
       invoiceId: invoiceData.invoiceId,
-      totalAmount: invoiceData.totalAmount || 0,
     });
 
     // Send checkout email to customer and admin

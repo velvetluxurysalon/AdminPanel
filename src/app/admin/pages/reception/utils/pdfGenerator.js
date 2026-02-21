@@ -108,6 +108,15 @@ export const generateProfessionalBillPDF = async (invoiceData, visit) => {
  * Centralizes the construction of the data object used by the PDF generator.
  */
 export const prepareInvoiceDataFromVisit = (visit, overrides = {}) => {
+  // Calculate actual discounted total
+  const itemsSubtotal = (visit.items || []).reduce(
+    (sum, item) => sum + (item.price || 0) * (item.quantity || 1),
+    0,
+  );
+  const subtotal = visit.subtotal || overrides.subtotal || itemsSubtotal || 0;
+  const discountAmount = visit.discountAmount || overrides.discountAmount || 0;
+  const afterDiscountTotal = subtotal - discountAmount;
+
   return {
     invoiceId: visit.invoiceId || overrides.invoiceId || "",
     visitId: visit.id,
@@ -120,16 +129,21 @@ export const prepareInvoiceDataFromVisit = (visit, overrides = {}) => {
       "",
     customerEmail: visit.customer?.email || visit.customerEmail || "",
     items: visit.items || [],
-    subtotal: visit.subtotal || overrides.subtotal || 0,
-    totalAmount: visit.totalAmount || overrides.totalAmount || 0,
-    discountAmount: visit.discountAmount || overrides.discountAmount || 0,
+    subtotal: subtotal,
+    // CRITICAL: totalAmount should be after discount, not subtotal
+    totalAmount:
+      visit.totalAmount || overrides.totalAmount || afterDiscountTotal || 0,
+    discountAmount: discountAmount,
     discountType: visit.discountType || overrides.discountType || "none",
-    paidAmount:
-      visit.paidAmount || overrides.paidAmount || visit.totalAmount || 0,
+    // paidAmount should not use totalAmount as fallback (could be subtotal)
+    paidAmount: visit.paidAmount || overrides.paidAmount || 0,
     paymentMode: visit.paymentMode || overrides.paymentMode || "cash",
     status:
       visit.status === "COMPLETED" ? "paid" : overrides.status || "unpaid",
     couponCode: visit.couponCode || overrides.couponCode || null,
+    couponIsCapped: visit.couponIsCapped || overrides.couponIsCapped || false,
+    couponOriginalDiscount:
+      visit.couponOriginalDiscount || overrides.couponOriginalDiscount || 0,
     pointsUsed: visit.pointsUsed || overrides.pointsUsed || 0,
     ...overrides,
   };
@@ -167,9 +181,22 @@ const getProfessionalBillHTML = (invoiceData, visit) => {
   );
   const subtotal = invoiceData.subtotal || calculatedSubtotal;
   const discount = invoiceData.discountAmount || 0;
-  const total = invoiceData.totalAmount || subtotal - discount;
+
+  // CRITICAL: Calculate the actual total after discount
+  const actualTotal = subtotal - discount;
+  // Use provided totalAmount only if it's valid (not 0 and equals calculated discounted total or is clearly different)
+  // Otherwise calculate from subtotal - discount
+  const total =
+    invoiceData.totalAmount && invoiceData.totalAmount > 0
+      ? invoiceData.totalAmount
+      : actualTotal;
+
   const paid = invoiceData.paidAmount || 0;
-  const balance = Math.max(0, total - paid);
+
+  // Balance due ONLY if paid amount is less than the actual discounted total
+  // Never show balance due for discounted amounts
+  const isPartialPayment = paid < total;
+  const balance = isPartialPayment ? Math.max(0, total - paid) : 0;
 
   return `
     <!DOCTYPE html>
