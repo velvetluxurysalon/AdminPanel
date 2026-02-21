@@ -3,26 +3,13 @@ import { Download, Printer, Mail, MessageCircle, X } from "lucide-react";
 import {
   generateProfessionalBillPDF,
   downloadPDF,
+  prepareInvoiceDataFromVisit,
 } from "../utils/pdfGenerator";
 
 const BillOptionsModal = ({ selectedVisit, onClose }) => {
   const handlePrintBill = async () => {
     try {
-      const invoiceData = {
-        invoiceId: selectedVisit.invoiceId, // Get invoiceId from visit data
-        visitId: selectedVisit.id,
-        customerId: selectedVisit.customerId,
-        customerName: selectedVisit.customer?.name,
-        customerPhone:
-          selectedVisit.customer?.phone || selectedVisit.customer?.contactNo,
-        customerEmail: selectedVisit.customer?.email || "",
-        items: selectedVisit.items,
-        totalAmount: selectedVisit.totalAmount,
-        discountAmount: 0,
-        paidAmount: selectedVisit.paidAmount || selectedVisit.totalAmount,
-        paymentMode: selectedVisit.paymentMode || "cash",
-        status: "paid",
-      };
+      const invoiceData = prepareInvoiceDataFromVisit(selectedVisit);
 
       const pdf = await generateProfessionalBillPDF(invoiceData, selectedVisit);
       pdf.autoPrint();
@@ -35,21 +22,7 @@ const BillOptionsModal = ({ selectedVisit, onClose }) => {
 
   const handleDownloadBill = async () => {
     try {
-      const invoiceData = {
-        invoiceId: selectedVisit.invoiceId, // Get invoiceId from visit data
-        visitId: selectedVisit.id,
-        customerId: selectedVisit.customerId,
-        customerName: selectedVisit.customer?.name,
-        customerPhone:
-          selectedVisit.customer?.phone || selectedVisit.customer?.contactNo,
-        customerEmail: selectedVisit.customer?.email || "",
-        items: selectedVisit.items,
-        totalAmount: selectedVisit.totalAmount,
-        discountAmount: 0,
-        paidAmount: selectedVisit.paidAmount || selectedVisit.totalAmount,
-        paymentMode: selectedVisit.paymentMode || "cash",
-        status: "paid",
-      };
+      const invoiceData = prepareInvoiceDataFromVisit(selectedVisit);
 
       const pdf = await generateProfessionalBillPDF(invoiceData, selectedVisit);
       downloadPDF(
@@ -64,21 +37,7 @@ const BillOptionsModal = ({ selectedVisit, onClose }) => {
 
   // Helper to create PDF Blob
   const createPDFBlob = async () => {
-    const invoiceData = {
-      invoiceId: selectedVisit.invoiceId, // Get invoiceId from visit data
-      visitId: selectedVisit.id,
-      customerId: selectedVisit.customerId,
-      customerName: selectedVisit.customer?.name,
-      customerPhone:
-        selectedVisit.customer?.phone || selectedVisit.customer?.contactNo,
-      customerEmail: selectedVisit.customer?.email || "",
-      items: selectedVisit.items,
-      totalAmount: selectedVisit.totalAmount,
-      discountAmount: 0,
-      paidAmount: selectedVisit.paidAmount || selectedVisit.totalAmount,
-      paymentMode: selectedVisit.paymentMode || "cash",
-      status: "paid",
-    };
+    const invoiceData = prepareInvoiceDataFromVisit(selectedVisit);
     const pdf = await generateProfessionalBillPDF(invoiceData, selectedVisit);
     return pdf.output("blob");
   };
@@ -105,26 +64,9 @@ const BillOptionsModal = ({ selectedVisit, onClose }) => {
         });
       } else {
         // Fallback: download PDF and instruct user to attach in WhatsApp
+        const invoiceData = prepareInvoiceDataFromVisit(selectedVisit);
         downloadPDF(
-          await generateProfessionalBillPDF(
-            {
-              invoiceId: selectedVisit.invoiceId,
-              visitId: selectedVisit.id,
-              customerId: selectedVisit.customerId,
-              customerName: selectedVisit.customer?.name,
-              customerPhone:
-                selectedVisit.customer?.phone ||
-                selectedVisit.customer?.contactNo,
-              customerEmail: selectedVisit.customer?.email || "",
-              items: selectedVisit.items,
-              totalAmount: selectedVisit.totalAmount,
-              discountAmount: 0,
-              paidAmount: selectedVisit.paidAmount || selectedVisit.totalAmount,
-              paymentMode: selectedVisit.paymentMode || "cash",
-              status: "paid",
-            },
-            selectedVisit,
-          ),
+          await generateProfessionalBillPDF(invoiceData, selectedVisit),
           `Velvet_Premium_Invoice_${selectedVisit.invoiceId || selectedVisit.customer?.name || "Guest"}.pdf`,
         );
         alert("PDF downloaded. Please attach and send via WhatsApp manually.");
@@ -153,26 +95,9 @@ const BillOptionsModal = ({ selectedVisit, onClose }) => {
         });
       } else {
         // Fallback: download PDF and open mailto
+        const invoiceData = prepareInvoiceDataFromVisit(selectedVisit);
         downloadPDF(
-          await generateProfessionalBillPDF(
-            {
-              invoiceId: selectedVisit.invoiceId,
-              visitId: selectedVisit.id,
-              customerId: selectedVisit.customerId,
-              customerName: selectedVisit.customer?.name,
-              customerPhone:
-                selectedVisit.customer?.phone ||
-                selectedVisit.customer?.contactNo,
-              customerEmail: selectedVisit.customer?.email || "",
-              items: selectedVisit.items,
-              totalAmount: selectedVisit.totalAmount,
-              discountAmount: 0,
-              paidAmount: selectedVisit.paidAmount || selectedVisit.totalAmount,
-              paymentMode: selectedVisit.paymentMode || "cash",
-              status: "paid",
-            },
-            selectedVisit,
-          ),
+          await generateProfessionalBillPDF(invoiceData, selectedVisit),
           `Velvet_Premium_Invoice_${selectedVisit.invoiceId || selectedVisit.customer?.name || "Guest"}.pdf`,
         );
         const mailtoLink = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent("Please find your invoice attached as PDF.")}`;

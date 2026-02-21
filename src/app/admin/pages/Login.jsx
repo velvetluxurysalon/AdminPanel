@@ -1,9 +1,9 @@
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth, db } from "../../../firebaseConfig";
 import { doc, getDoc } from "firebase/firestore";
-import { Scissors, Mail, Lock, UserPlus } from "lucide-react";
+import { Scissors, Mail, Lock } from "lucide-react";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -156,57 +156,6 @@ const Login = () => {
                 "Sign In"
               )}
             </button>
-
-            <div
-              style={{
-                textAlign: "center",
-                borderTop: "1px solid var(--border-light)",
-                paddingTop: "1rem",
-                marginTop: "1rem",
-              }}
-            >
-              <p
-                style={{
-                  fontSize: "0.875rem",
-                  color: "var(--muted-foreground)",
-                  marginBottom: "0.75rem",
-                }}
-              >
-                Don't have an admin account yet?
-              </p>
-              <Link
-                to="/admin/register"
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "0.5rem",
-                  padding: "0.625rem 1.5rem",
-                  background:
-                    "linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(34, 197, 94, 0.05) 100%)",
-                  border: "1px solid rgba(34, 197, 94, 0.3)",
-                  borderRadius: "0.375rem",
-                  color: "#22c55e",
-                  textDecoration: "none",
-                  fontSize: "0.875rem",
-                  fontWeight: "600",
-                  cursor: "pointer",
-                  transition: "all 0.2s",
-                }}
-                onMouseEnter={(e) => {
-                  e.target.style.background =
-                    "linear-gradient(135deg, rgba(34, 197, 94, 0.2) 0%, rgba(34, 197, 94, 0.1) 100%)";
-                  e.target.style.borderColor = "rgba(34, 197, 94, 0.5)";
-                }}
-                onMouseLeave={(e) => {
-                  e.target.style.background =
-                    "linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(34, 197, 94, 0.05) 100%)";
-                  e.target.style.borderColor = "rgba(34, 197, 94, 0.3)";
-                }}
-              >
-                <UserPlus size={18} />
-                Create Admin Account
-              </Link>
-            </div>
           </form>
         </div>
 

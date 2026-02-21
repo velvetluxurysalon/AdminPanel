@@ -12,10 +12,12 @@ import {
   Mail,
   Coins,
   Check,
+  Loader,
 } from "lucide-react";
 import {
   generateProfessionalBillPDF,
   downloadPDF,
+  prepareInvoiceDataFromVisit,
 } from "../utils/pdfGenerator";
 import {
   updateDocument,
@@ -25,6 +27,7 @@ import {
   validateCoupon,
   incrementCouponUsage,
 } from "../../../utils/firebaseUtils";
+import { sendBillViaWhatsApp } from "../../../services/whatsappService";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../../../../../firebaseConfig";
 
@@ -49,6 +52,11 @@ const CheckoutModal = ({
   const [couponData, setCouponData] = useState(null);
   const [couponError, setCouponError] = useState("");
   const [validatingCoupon, setValidatingCoupon] = useState(false);
+  // WhatsApp auto-send states
+  const [sendingWhatsApp, setSendingWhatsApp] = useState(false);
+  const [whatsappSent, setWhatsappSent] = useState(false);
+  const [whatsappError, setWhatsappError] = useState("");
+  const [autoSendWhatsApp, setAutoSendWhatsApp] = useState(true);
 
   // Fetch latest customer data including loyaltyPoints and membershipType
   useEffect(() => {
@@ -95,6 +103,69 @@ const CheckoutModal = ({
       setCouponError("");
     }
   }, [discountType]);
+
+  // Auto-send WhatsApp bill when payment is completed
+  useEffect(() => {
+    if (
+      paymentCompleted &&
+      invoiceData &&
+      autoSendWhatsApp &&
+      !whatsappSent &&
+      !sendingWhatsApp
+    ) {
+      handleAutoSendWhatsApp();
+    }
+  }, [paymentCompleted, invoiceData, autoSendWhatsApp]);
+
+  // Function to handle automatic WhatsApp sending
+  const handleAutoSendWhatsApp = async () => {
+    try {
+      setSendingWhatsApp(true);
+      setWhatsappError("");
+
+      const phoneNumber =
+        visit.customer?.phone ||
+        visit.customer?.contactNo ||
+        invoiceData?.customerPhone ||
+        "";
+
+      if (!phoneNumber) {
+        setWhatsappError("No phone number available for WhatsApp");
+        setSendingWhatsApp(false);
+        return;
+      }
+
+      console.log(
+        "📱 [CheckoutModal] Auto-sending WhatsApp bill to:",
+        phoneNumber,
+      );
+
+      // Create PDF blob
+      const pdf = await generateProfessionalBillPDF(invoiceData, visit);
+      const pdfBlob = pdf.output("blob");
+
+      // Send via WhatsApp service
+      const result = await sendBillViaWhatsApp(
+        invoiceData,
+        phoneNumber,
+        pdfBlob,
+      );
+
+      if (result.success) {
+        console.log("✅ [CheckoutModal] WhatsApp sent successfully");
+        setWhatsappSent(true);
+        setWhatsappError("");
+      } else {
+        console.error("❌ [CheckoutModal] WhatsApp send failed:", result.error);
+        setWhatsappError(result.message || "Failed to send WhatsApp");
+      }
+    } catch (error) {
+      console.error("❌ [CheckoutModal] Error auto-sending WhatsApp:", error);
+      setWhatsappError(error.message || "Error sending WhatsApp bill");
+    } finally {
+      setSendingWhatsApp(false);
+    }
+  };
 
   const baseTotals = calculateTotals(visit);
 
@@ -205,69 +276,85 @@ const CheckoutModal = ({
 
   const handleCompletePayment = async () => {
     try {
-      let currentLoyaltyPoints = availableLoyaltyPoints;
-      let pointsDeducted = 0;
-      let pointsEarned = 0;
-      let transactionDescription = "";
+      // Use customerData from state if available, otherwise fetch it again
+      let latestCustomer = customerData;
+      const customerId = visit.customerId || visit.customer?.id;
 
-      // If loyalty points are used as discount, deduct them from customer
-      if (discountType === "coins" && coinsUsed) {
-        pointsDeducted = parseFloat(coinsUsed) || 0;
-        currentLoyaltyPoints = currentLoyaltyPoints - pointsDeducted;
+      if (!latestCustomer && customerId) {
+        latestCustomer = await getDocument("customers", customerId);
       }
 
-      // Award loyalty points based on amount paid
-      // 1 point per ₹1 spent (equal value)
+      if (!latestCustomer && customerId) {
+        throw new Error("Could not retrieve customer profile for loyalty points update");
+      }
+
+      const currentPoints = latestCustomer?.loyaltyPoints || 0;
+      let pointsDeducted = 0;
+      let pointsEarned = 0;
       const amountPaidValue = parseFloat(amountPaid) || 0;
+
+      // Deduct points if used as discount
+      if (discountType === "coins" && coinsUsed) {
+        pointsDeducted = Math.floor(parseFloat(coinsUsed) || 0);
+      }
+
+      // Award points only for newly paid amount (not from points)
+      // 1 point per 1 rupee spent
       pointsEarned = Math.floor(amountPaidValue);
-      const finalLoyaltyPoints = currentLoyaltyPoints + pointsEarned;
 
-      // Create single transaction entry in pointsHistory
-      if (pointsDeducted > 0 || pointsEarned > 0) {
-        let description = "";
-        if (pointsDeducted > 0 && pointsEarned > 0) {
-          description = `${pointsDeducted} points used as discount, ${pointsEarned} points earned from ₹${amountPaidValue} purchase`;
-        } else if (pointsDeducted > 0) {
-          description = `${pointsDeducted} points used as discount`;
-        } else {
-          description = `${pointsEarned} points earned from ₹${amountPaidValue} purchase`;
-        }
+      // Final calculation: Starting Balance - Deducted + Earned
+      const finalLoyaltyPoints = currentPoints - pointsDeducted + pointsEarned;
 
+      console.log("🪙 [Points Update Debug]", {
+        currentPoints,
+        pointsDeducted,
+        pointsEarned,
+        finalLoyaltyPoints,
+        amountPaidValue,
+        customerId
+      });
+
+      // Generate formatted invoice ID (VELVET0001 format)
+      const invoiceId = await generateInvoiceId();
+
+      // Log transactions separately if both happen, or one if only one
+      if (pointsDeducted > 0) {
         await addDoc(
-          collection(db, `customers/${visit.customerId}/pointsHistory`),
+          collection(db, `customers/${customerId}/pointsHistory`),
           {
-            type:
-              pointsDeducted > 0 && pointsEarned > 0
-                ? "adjusted"
-                : pointsDeducted > 0
-                  ? "deducted"
-                  : "earned",
-            amount: pointsEarned - pointsDeducted,
-            points: pointsEarned - pointsDeducted,
-            pointsDeducted: pointsDeducted,
-            pointsEarned: pointsEarned,
-            description: description,
-            invoiceId: visit.id,
-            billDetails: {
-              amountSpent: amountPaidValue,
-              paymentMethod: paymentMethod,
-              discountGiven: finalDiscount,
-              itemsCount: visit.items?.length || 0,
-            },
+            type: "deducted",
+            points: -pointsDeducted,
+            amount: -pointsDeducted,
+            description: `Used as discount for invoice ${invoiceId}`,
+            invoiceId: invoiceId,
             transactionDate: serverTimestamp(),
           },
         );
       }
 
-      // Update customer loyalty points in Firebase
-      await updateDocument("customers", visit.customerId, {
-        loyaltyPoints: finalLoyaltyPoints,
-        totalSpent: (visit.customer?.totalSpent || 0) + amountPaidValue,
-        totalVisits: (visit.customer?.totalVisits || 0) + 1,
-      });
+      if (pointsEarned > 0) {
+        await addDoc(
+          collection(db, `customers/${customerId}/pointsHistory`),
+          {
+            type: "earned",
+            points: pointsEarned,
+            amount: pointsEarned,
+            description: `Earned from ₹${amountPaidValue} payment for invoice ${invoiceId}`,
+            invoiceId: invoiceId,
+            transactionDate: serverTimestamp(),
+          },
+        );
+      }
 
-      // Generate invoice ID before creating invoice data
-      const invoiceId = await generateInvoiceId();
+      // Update customer document using FRESH data for totalSpent and totalVisits
+      const updatedTotalSpent = (latestCustomer?.totalSpent || 0) + amountPaidValue;
+      const updatedTotalVisits = (latestCustomer?.totalVisits || 0) + 1;
+
+      await updateDocument("customers", customerId, {
+        loyaltyPoints: finalLoyaltyPoints,
+        totalSpent: parseFloat(updatedTotalSpent.toFixed(2)),
+        totalVisits: updatedTotalVisits,
+      });
 
       const newInvoiceData = {
         invoiceId: invoiceId, // Include the generated invoice ID
@@ -395,24 +482,18 @@ const CheckoutModal = ({
 
   const handlePrintBill = async () => {
     try {
-      // Use existing invoiceData from state if available (after payment completion)
-      // Otherwise, create a new one (for print before payment - though this shouldn't normally happen)
-      const pdfInvoiceData = invoiceData || {
-        invoiceId: invoiceData?.invoiceId, // Ensure invoiceId is included
-        visitId: visit.id,
-        customerId: visit.customerId,
-        customerName: visit.customer?.name,
-        customerPhone: visit.customer?.contactNo || visit.customer?.phone,
-        customerEmail: visit.customer?.email || "",
-        items: visit.items,
-        subtotal: baseTotals.subtotal,
-        totalAmount: totalAmount,
-        discountAmount: finalDiscount,
-        discountType: discountType,
-        paidAmount: parseFloat(amountPaid) || 0,
-        paymentMode: paymentMethod,
-        status: amountPaid >= totalAmount ? "paid" : "partial",
-      };
+      // Use helper to prepare data - falls back to current UI state if payment not yet finalized
+      const pdfInvoiceData =
+        invoiceData ||
+        prepareInvoiceDataFromVisit(visit, {
+          totalAmount: totalAmount,
+          subtotal: baseTotals.subtotal,
+          discountAmount: finalDiscount,
+          discountType: discountType,
+          paidAmount: parseFloat(amountPaid) || 0,
+          paymentMode: paymentMethod,
+          status: amountPaid >= totalAmount ? "paid" : "partial",
+        });
 
       const pdf = await generateProfessionalBillPDF(pdfInvoiceData, visit);
       pdf.autoPrint();
@@ -425,24 +506,17 @@ const CheckoutModal = ({
 
   const handleDownloadBill = async () => {
     try {
-      // Use existing invoiceData from state if available (after payment completion)
-      // Otherwise, create a new one (for download before payment - though this shouldn't normally happen)
-      const pdfInvoiceData = invoiceData || {
-        invoiceId: invoiceData?.invoiceId, // Ensure invoiceId is included
-        visitId: visit.id,
-        customerId: visit.customerId,
-        customerName: visit.customer?.name,
-        customerPhone: visit.customer?.contactNo || visit.customer?.phone,
-        customerEmail: visit.customer?.email || "",
-        items: visit.items,
-        subtotal: baseTotals.subtotal,
-        totalAmount: totalAmount,
-        discountAmount: finalDiscount,
-        discountType: discountType,
-        paidAmount: parseFloat(amountPaid) || 0,
-        paymentMode: paymentMethod,
-        status: amountPaid >= totalAmount ? "paid" : "partial",
-      };
+      const pdfInvoiceData =
+        invoiceData ||
+        prepareInvoiceDataFromVisit(visit, {
+          totalAmount: totalAmount,
+          subtotal: baseTotals.subtotal,
+          discountAmount: finalDiscount,
+          discountType: discountType,
+          paidAmount: parseFloat(amountPaid) || 0,
+          paymentMode: paymentMethod,
+          status: amountPaid >= totalAmount ? "paid" : "partial",
+        });
 
       const pdf = await generateProfessionalBillPDF(pdfInvoiceData, visit);
       downloadPDF(
@@ -457,24 +531,17 @@ const CheckoutModal = ({
 
   // Helper to create PDF Blob
   const createPDFBlob = async () => {
-    // Use existing invoiceData from state if available (after payment completion)
-    // Otherwise, create a new one (for share before payment - though this shouldn't normally happen)
-    const pdfInvoiceData = invoiceData || {
-      invoiceId: invoiceData?.invoiceId, // Ensure invoiceId is included
-      visitId: visit.id,
-      customerId: visit.customerId,
-      customerName: visit.customer?.name,
-      customerPhone: visit.customer?.contactNo || visit.customer?.phone,
-      customerEmail: visit.customer?.email || "",
-      items: visit.items,
-      subtotal: baseTotals.subtotal,
-      totalAmount: totalAmount,
-      discountAmount: finalDiscount,
-      discountType: discountType,
-      paidAmount: parseFloat(amountPaid) || 0,
-      paymentMode: paymentMethod,
-      status: amountPaid >= totalAmount ? "paid" : "partial",
-    };
+    const pdfInvoiceData =
+      invoiceData ||
+      prepareInvoiceDataFromVisit(visit, {
+        totalAmount: totalAmount,
+        subtotal: baseTotals.subtotal,
+        discountAmount: finalDiscount,
+        discountType: discountType,
+        paidAmount: parseFloat(amountPaid) || 0,
+        paymentMode: paymentMethod,
+        status: amountPaid >= totalAmount ? "paid" : "partial",
+      });
     const pdf = await generateProfessionalBillPDF(pdfInvoiceData, visit);
     return pdf.output("blob");
   };
@@ -501,25 +568,20 @@ const CheckoutModal = ({
         });
       } else {
         // Fallback: download PDF and instruct user to attach in WhatsApp
+        const pdfInvoiceData =
+          invoiceData ||
+          prepareInvoiceDataFromVisit(visit, {
+            totalAmount: totalAmount,
+            subtotal: baseTotals.subtotal,
+            discountAmount: finalDiscount,
+            discountType: discountType,
+            paidAmount: parseFloat(amountPaid) || 0,
+            paymentMode: paymentMethod,
+            status: amountPaid >= totalAmount ? "paid" : "partial",
+          });
+
         downloadPDF(
-          await generateProfessionalBillPDF(
-            invoiceData || {
-              visitId: visit.id,
-              customerId: visit.customerId,
-              customerName: visit.customer?.name,
-              customerPhone: visit.customer?.contactNo || visit.customer?.phone,
-              customerEmail: visit.customer?.email || "",
-              items: visit.items,
-              subtotal: baseTotals.subtotal,
-              totalAmount: totalAmount,
-              discountAmount: finalDiscount,
-              discountType: discountType,
-              paidAmount: parseFloat(amountPaid) || 0,
-              paymentMode: paymentMethod,
-              status: amountPaid >= totalAmount ? "paid" : "partial",
-            },
-            visit,
-          ),
+          await generateProfessionalBillPDF(pdfInvoiceData, visit),
           `Velvet_Luxury_Salon_Invoice_${invoiceData?.invoiceId || visit.customer?.name || "Guest"}.pdf`,
         );
         alert("PDF downloaded. Please attach and send via WhatsApp manually.");
@@ -548,25 +610,20 @@ const CheckoutModal = ({
         });
       } else {
         // Fallback: download PDF and open mailto
+        const pdfInvoiceData =
+          invoiceData ||
+          prepareInvoiceDataFromVisit(visit, {
+            totalAmount: totalAmount,
+            subtotal: baseTotals.subtotal,
+            discountAmount: finalDiscount,
+            discountType: discountType,
+            paidAmount: parseFloat(amountPaid) || 0,
+            paymentMode: paymentMethod,
+            status: amountPaid >= totalAmount ? "paid" : "partial",
+          });
+
         downloadPDF(
-          await generateProfessionalBillPDF(
-            invoiceData || {
-              visitId: visit.id,
-              customerId: visit.customerId,
-              customerName: visit.customer?.name,
-              customerPhone: visit.customer?.contactNo || visit.customer?.phone,
-              customerEmail: visit.customer?.email || "",
-              items: visit.items,
-              subtotal: baseTotals.subtotal,
-              totalAmount: totalAmount,
-              discountAmount: finalDiscount,
-              discountType: discountType,
-              paidAmount: parseFloat(amountPaid) || 0,
-              paymentMode: paymentMethod,
-              status: amountPaid >= totalAmount ? "paid" : "partial",
-            },
-            visit,
-          ),
+          await generateProfessionalBillPDF(pdfInvoiceData, visit),
           `Velvet_Luxury_Salon_Invoice_${invoiceData?.invoiceId || visit.customer?.name || "Guest"}.pdf`,
         );
         const mailtoLink = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent("Please find your invoice attached as PDF.")}`;
@@ -641,6 +698,122 @@ const CheckoutModal = ({
           >
             Invoice generated for {visit.customer?.name || visit.customerName}
           </p>
+
+          {/* WhatsApp Status Section */}
+          {sendingWhatsApp && (
+            <div
+              style={{
+                background: "#fef3c7",
+                border: "1px solid #fcd34d",
+                borderRadius: "0.5rem",
+                padding: "0.875rem",
+                marginBottom: "1.5rem",
+                display: "flex",
+                alignItems: "center",
+                gap: "0.75rem",
+                color: "#92400e",
+                fontSize: "0.875rem",
+              }}
+            >
+              <Loader
+                size={16}
+                style={{ animation: "spin 1s linear infinite" }}
+              />
+              <span>Sending bill via WhatsApp...</span>
+            </div>
+          )}
+
+          {whatsappSent && (
+            <div
+              style={{
+                background: "#dcfce7",
+                border: "1px solid #86efac",
+                borderRadius: "0.5rem",
+                padding: "0.875rem",
+                marginBottom: "1.5rem",
+                display: "flex",
+                alignItems: "center",
+                gap: "0.75rem",
+                color: "#166534",
+                fontSize: "0.875rem",
+              }}
+            >
+              <Check size={16} />
+              <span>✅ Bill sent successfully via WhatsApp!</span>
+            </div>
+          )}
+
+          {whatsappError && (
+            <div
+              style={{
+                background: "#fee2e2",
+                border: "1px solid #fca5a5",
+                borderRadius: "0.5rem",
+                padding: "0.875rem",
+                marginBottom: "1.5rem",
+                color: "#991b1b",
+                fontSize: "0.875rem",
+              }}
+            >
+              <p style={{ margin: 0, marginBottom: "0.5rem" }}>
+                ⚠️ {whatsappError}
+              </p>
+              <button
+                onClick={handleAutoSendWhatsApp}
+                disabled={sendingWhatsApp}
+                style={{
+                  fontSize: "0.75rem",
+                  padding: "0.35rem 0.75rem",
+                  background: "#dc2626",
+                  color: "white",
+                  border: "none",
+                  borderRadius: "0.25rem",
+                  cursor: sendingWhatsApp ? "not-allowed" : "pointer",
+                  opacity: sendingWhatsApp ? 0.6 : 1,
+                }}
+              >
+                Retry Send
+              </button>
+            </div>
+          )}
+
+          {/* Auto-send WhatsApp Toggle */}
+          <div
+            style={{
+              background: "#f3f4f6",
+              borderRadius: "0.5rem",
+              padding: "0.75rem",
+              marginBottom: "1.5rem",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              fontSize: "0.875rem",
+            }}
+          >
+            <label
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "0.5rem",
+                color: "#374151",
+                fontWeight: "500",
+                cursor: "pointer",
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={autoSendWhatsApp}
+                onChange={(e) => setAutoSendWhatsApp(e.target.checked)}
+                style={{
+                  width: "18px",
+                  height: "18px",
+                  cursor: "pointer",
+                }}
+              />
+              <MessageCircle size={14} style={{ color: "#16a34a" }} />
+              <span>Auto-send to WhatsApp</span>
+            </label>
+          </div>
 
           <div
             style={{
@@ -772,6 +945,14 @@ const CheckoutModal = ({
         }
         input[type="number"] {
           -moz-appearance: textfield;
+        }
+        @keyframes spin {
+          from {
+            transform: rotate(0deg);
+          }
+          to {
+            transform: rotate(360deg);
+          }
         }
       `}</style>
       <div

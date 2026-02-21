@@ -6,11 +6,12 @@ import html2canvas from "html2canvas";
  * Optimized for full A4 page width without clipping or blank margins.
  */
 export const generateProfessionalBillPDF = async (invoiceData, visit) => {
+  let container = null;
   try {
     // Scroll to top to ensure clean capture coordinates
     window.scrollTo(0, 0);
 
-    const container = document.createElement("div");
+    container = document.createElement("div");
     container.innerHTML = getProfessionalBillHTML(invoiceData, visit);
 
     // High-precision width for A4 (Approx 1024px is standard for 210mm at 96dpi * scale)
@@ -25,6 +26,7 @@ export const generateProfessionalBillPDF = async (invoiceData, visit) => {
     const canvas = await html2canvas(container, {
       scale: 2,
       useCORS: true,
+      allowTaint: true,
       backgroundColor: "#ffffff",
       width: captureWidth,
       windowWidth: captureWidth,
@@ -34,8 +36,6 @@ export const generateProfessionalBillPDF = async (invoiceData, visit) => {
         const allElements = clonedDoc.getElementsByTagName("*");
         for (let i = 0; i < allElements.length; i++) {
           const el = allElements[i];
-          const styles = window.getComputedStyle(el);
-
           // Re-force static colors for the capture to bypass oklch parsing
           if (el.classList.contains("invoice-root")) {
             el.style.backgroundColor = "#ffffff";
@@ -58,8 +58,6 @@ export const generateProfessionalBillPDF = async (invoiceData, visit) => {
         });
       },
     });
-
-    document.body.removeChild(container);
 
     const imgData = canvas.toDataURL("image/jpeg", 1.0);
 
@@ -98,7 +96,43 @@ export const generateProfessionalBillPDF = async (invoiceData, visit) => {
   } catch (error) {
     console.error("Ultra-Premium PDF Generation Failed:", error);
     throw error;
+  } finally {
+    if (container && container.parentNode) {
+      document.body.removeChild(container);
+    }
   }
+};
+
+/**
+ * Helper to prepare standard invoice data from a visit object.
+ * Centralizes the construction of the data object used by the PDF generator.
+ */
+export const prepareInvoiceDataFromVisit = (visit, overrides = {}) => {
+  return {
+    invoiceId: visit.invoiceId || overrides.invoiceId || "",
+    visitId: visit.id,
+    customerId: visit.customerId,
+    customerName: visit.customer?.name || visit.customerName || "Guest",
+    customerPhone:
+      visit.customer?.phone ||
+      visit.customer?.contactNo ||
+      visit.customerPhone ||
+      "",
+    customerEmail: visit.customer?.email || visit.customerEmail || "",
+    items: visit.items || [],
+    subtotal: visit.subtotal || overrides.subtotal || 0,
+    totalAmount: visit.totalAmount || overrides.totalAmount || 0,
+    discountAmount: visit.discountAmount || overrides.discountAmount || 0,
+    discountType: visit.discountType || overrides.discountType || "none",
+    paidAmount:
+      visit.paidAmount || overrides.paidAmount || visit.totalAmount || 0,
+    paymentMode: visit.paymentMode || overrides.paymentMode || "cash",
+    status:
+      visit.status === "COMPLETED" ? "paid" : overrides.status || "unpaid",
+    couponCode: visit.couponCode || overrides.couponCode || null,
+    pointsUsed: visit.pointsUsed || overrides.pointsUsed || 0,
+    ...overrides,
+  };
 };
 
 const formatCurrency = (amount) => {
@@ -127,8 +161,12 @@ const getProfessionalBillHTML = (invoiceData, visit) => {
     )
     .join("");
 
+  const calculatedSubtotal = (visit.items || []).reduce(
+    (sum, item) => sum + (item.price || 0) * (item.quantity || 1),
+    0,
+  );
+  const subtotal = invoiceData.subtotal || calculatedSubtotal;
   const discount = invoiceData.discountAmount || 0;
-  const subtotal = invoiceData.subtotal || invoiceData.totalAmount || 0;
   const total = invoiceData.totalAmount || subtotal - discount;
   const paid = invoiceData.paidAmount || 0;
   const balance = Math.max(0, total - paid);
@@ -146,7 +184,7 @@ const getProfessionalBillHTML = (invoiceData, visit) => {
         
         .invoice-root {
           width: 1024px;
-          height: auto; /* Dynamic height based on content */
+          min-height: 1448px; /* A4 height at 1024px width */
           background: #ffffff;
           font-family: 'Inter', -apple-system, sans-serif;
           color: #0c0c0c;
@@ -637,35 +675,33 @@ const getProfessionalBillHTML = (invoiceData, visit) => {
               <span>${formatCurrency(balance)}</span>
             </div>
             `
-                : `
-            <div class="summary-row" style="color: #10b981; font-weight: 800; border-top: 1px dashed #ddd; padding-top: 15px; margin-top: 10px;">
-              <span>✓ Payment Complete</span>
-            </div>
-            `
+                : ""
             }
           </div>
         </div>
 
-        <div class="membership-banner">
-          <div class="banner-text">
-            <h4>Experience Premium Care</h4>
-            <p>Elevate your lifestyle. Book appointments and explore<br>exclusive services through our digital boutique.</p>
+        <div class="footer-pinned" style="margin-top: auto; padding-top: 40px;">
+          <div class="membership-banner">
+            <div class="banner-text">
+              <h4>Experience Premium Care</h4>
+              <p>Elevate your lifestyle. Book appointments and explore<br>exclusive services through our digital salon.</p>
+            </div>
+            <div class="banner-link">
+              <div class="banner-url">velvetluxurysalon.in</div>
+              <div class="banner-info">Official Digital Portal</div>
+            </div>
           </div>
-          <div class="banner-link">
-            <div class="banner-url">velvetluxurysalon.in</div>
-            <div class="banner-info">Official Digital Portal</div>
-          </div>
-        </div>
 
-        <div class="footer">
-          <div class="salon-info">
-            Opposite ICICI Bank, Bharathi Nagar<br>
-            Bhavani, Erode, Tamil Nadu 638301<br>
-            Direct: +91 96677 22611
-          </div>
-          <div class="thanks-section">
-            <div class="thanks-msg">Thank You</div>
-            <div class="legal-tag">Velvet Premium Unisex Salon</div>
+          <div class="footer">
+            <div class="salon-info">
+              Opposite ICICI Bank, Bharathi Nagar<br>
+              Bhavani, Erode, Tamil Nadu 638301<br>
+              Phone: +91 96677 22611
+            </div>
+            <div class="thanks-section">
+              <div class="thanks-msg">Thank You</div>
+              <div class="legal-tag">Velvet Premium Unisex Salon</div>
+            </div>
           </div>
         </div>
       </div>

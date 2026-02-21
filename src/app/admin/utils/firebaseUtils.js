@@ -1187,8 +1187,8 @@ export const generateInvoiceId = async () => {
       // Update the counter
       transaction.set(counterRef, { count: nextNumber }, { merge: true });
 
-      // Return formatted invoice ID
-      return `VELVET${String(nextNumber).padStart(5, "0")}`;
+      // Return formatted invoice ID with 4 padding zeros for format VELVET0001
+      return `VELVET${String(nextNumber).padStart(4, "0")}`;
     });
 
     return newId;
@@ -1227,15 +1227,20 @@ export const createInvoice = async (invoiceData) => {
       subtotal = 0,
     } = invoiceData;
 
-    // Generate custom invoice ID
-    const invoiceId = await generateInvoiceId();
+    // Use provided invoice ID (from CheckoutModal) or generate a new one
+    const invoiceId = invoiceData.invoiceId || (await generateInvoiceId());
 
-    // Calculate net amount after discount (use provided values if available)
+    // Calculate net amount after discount
     const calculatedDiscount =
       discountAmount || (totalAmount * discountPercent) / 100;
-    const calculatedSubtotal = subtotal || totalAmount - calculatedDiscount;
-    const taxAmount = (calculatedSubtotal * taxPercent) / 100;
-    const finalAmount = calculatedSubtotal + taxAmount;
+
+    // Subtotal should be the sum of items before discount
+    const calculatedSubtotal =
+      subtotal || parseFloat(totalAmount) + parseFloat(calculatedDiscount);
+
+    // finalAmount should match what the user saw on checkout screen
+    const finalAmount =
+      parseFloat(totalAmount) || calculatedSubtotal - calculatedDiscount;
 
     // Build invoice object, filtering out undefined values
     const invoiceObj = {
@@ -1247,15 +1252,15 @@ export const createInvoice = async (invoiceData) => {
       customerEmail: customerEmail || "",
       customerPhone: customerPhone || "",
       items: items || [],
-      totalAmount: totalAmount || 0,
+      totalAmount: finalAmount || 0,
       discountPercent: discountPercent || 0,
       discountAmount: calculatedDiscount || 0,
       discountType: discountType || "none",
       pointsUsed: pointsUsed || 0,
       pointsDiscount: pointsDiscount || 0,
       pointsEarned: pointsEarned || 0,
-      taxPercent: taxPercent || 0,
-      taxAmount: taxAmount || 0,
+      taxPercent: 0,
+      taxAmount: 0,
       subtotal: calculatedSubtotal || 0,
       finalAmount: finalAmount || 0,
       paidAmount: parseFloat(paidAmount) || 0,
