@@ -27,7 +27,10 @@ import {
   validateCoupon,
   incrementCouponUsage,
 } from "../../../utils/firebaseUtils";
-import { sendBillViaWhatsApp } from "../../../services/whatsappService";
+import {
+  sendBillViaWhatsApp,
+  openWhatsAppDirect,
+} from "../../../services/whatsappService";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../../../../../firebaseConfig";
 
@@ -285,7 +288,9 @@ const CheckoutModal = ({
       }
 
       if (!latestCustomer && customerId) {
-        throw new Error("Could not retrieve customer profile for loyalty points update");
+        throw new Error(
+          "Could not retrieve customer profile for loyalty points update",
+        );
       }
 
       const currentPoints = latestCustomer?.loyaltyPoints || 0;
@@ -311,7 +316,7 @@ const CheckoutModal = ({
         pointsEarned,
         finalLoyaltyPoints,
         amountPaidValue,
-        customerId
+        customerId,
       });
 
       // Generate formatted invoice ID (VELVET0001 format)
@@ -319,35 +324,30 @@ const CheckoutModal = ({
 
       // Log transactions separately if both happen, or one if only one
       if (pointsDeducted > 0) {
-        await addDoc(
-          collection(db, `customers/${customerId}/pointsHistory`),
-          {
-            type: "deducted",
-            points: -pointsDeducted,
-            amount: -pointsDeducted,
-            description: `Used as discount for invoice ${invoiceId}`,
-            invoiceId: invoiceId,
-            transactionDate: serverTimestamp(),
-          },
-        );
+        await addDoc(collection(db, `customers/${customerId}/pointsHistory`), {
+          type: "deducted",
+          points: -pointsDeducted,
+          amount: -pointsDeducted,
+          description: `Used as discount for invoice ${invoiceId}`,
+          invoiceId: invoiceId,
+          transactionDate: serverTimestamp(),
+        });
       }
 
       if (pointsEarned > 0) {
-        await addDoc(
-          collection(db, `customers/${customerId}/pointsHistory`),
-          {
-            type: "earned",
-            points: pointsEarned,
-            amount: pointsEarned,
-            description: `Earned from ₹${amountPaidValue} payment for invoice ${invoiceId}`,
-            invoiceId: invoiceId,
-            transactionDate: serverTimestamp(),
-          },
-        );
+        await addDoc(collection(db, `customers/${customerId}/pointsHistory`), {
+          type: "earned",
+          points: pointsEarned,
+          amount: pointsEarned,
+          description: `Earned from ₹${amountPaidValue} payment for invoice ${invoiceId}`,
+          invoiceId: invoiceId,
+          transactionDate: serverTimestamp(),
+        });
       }
 
       // Update customer document using FRESH data for totalSpent and totalVisits
-      const updatedTotalSpent = (latestCustomer?.totalSpent || 0) + amountPaidValue;
+      const updatedTotalSpent =
+        (latestCustomer?.totalSpent || 0) + amountPaidValue;
       const updatedTotalVisits = (latestCustomer?.totalVisits || 0) + 1;
 
       await updateDocument("customers", customerId, {
@@ -547,47 +547,40 @@ const CheckoutModal = ({
   };
 
   // Share PDF via WhatsApp (Web Share API or fallback)
-  const handleShareWhatsApp = async () => {
+  const handleShareWhatsApp = () => {
     try {
       const phone = (
         visit.customer?.contactNo ||
         visit.customer?.phone ||
         ""
       ).replace(/\D/g, "");
-      const pdfBlob = await createPDFBlob();
-      const file = new File(
-        [pdfBlob],
-        `Velvet_Luxury_Salon_Invoice_${invoiceData?.invoiceId || visit.customer?.name || "Guest"}.pdf`,
-        { type: "application/pdf" },
-      );
-      if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        await navigator.share({
-          files: [file],
-          title: "Velvet Premium Unisex Salon Invoice",
-          text: "Please find your invoice attached.",
-        });
-      } else {
-        // Fallback: download PDF and instruct user to attach in WhatsApp
-        const pdfInvoiceData =
-          invoiceData ||
-          prepareInvoiceDataFromVisit(visit, {
-            totalAmount: totalAmount,
-            subtotal: baseTotals.subtotal,
-            discountAmount: finalDiscount,
-            discountType: discountType,
-            paidAmount: parseFloat(amountPaid) || 0,
-            paymentMode: paymentMethod,
-            status: amountPaid >= totalAmount ? "paid" : "partial",
-          });
 
-        downloadPDF(
-          await generateProfessionalBillPDF(pdfInvoiceData, visit),
-          `Velvet_Luxury_Salon_Invoice_${invoiceData?.invoiceId || visit.customer?.name || "Guest"}.pdf`,
-        );
-        alert("PDF downloaded. Please attach and send via WhatsApp manually.");
+      if (!phone) {
+        alert("No phone number available for WhatsApp");
+        return;
+      }
+
+      // Prepare invoice data with current checkout details
+      const shareInvoiceData =
+        invoiceData ||
+        prepareInvoiceDataFromVisit(visit, {
+          totalAmount: totalAmount,
+          subtotal: baseTotals.subtotal,
+          discountAmount: finalDiscount,
+          discountType: discountType,
+          paidAmount: parseFloat(amountPaid) || 0,
+          paymentMode: paymentMethod,
+          status: amountPaid >= totalAmount ? "paid" : "partial",
+        });
+
+      // Open WhatsApp directly with formatted message
+      const result = openWhatsAppDirect(phone, shareInvoiceData);
+
+      if (!result.success) {
+        alert("Error: " + result.message);
       }
     } catch (err) {
-      alert("Unable to share PDF. Please try again.");
+      alert("Error opening WhatsApp: " + err.message);
     }
   };
 

@@ -281,3 +281,58 @@ export const formatBillMessage = (billData) => {
 
   return text;
 };
+
+/**
+ * Direct WhatsApp Web link opener - Opens chat with formatted message
+ * @param {string} phoneNumber - Customer phone number
+ * @param {Object} billData - Bill data for formatted message
+ */
+export const openWhatsAppDirect = (phoneNumber, billData) => {
+  try {
+    if (!phoneNumber) {
+      throw new Error("Phone number is required");
+    }
+
+    // Normalize phone number to remove non-digits
+    const cleanedPhone = phoneNumber.replace(/\D/g, "");
+    if (!cleanedPhone) {
+      throw new Error("Invalid phone number");
+    }
+
+    // Add country code if not present (assuming India +91)
+    const finalPhone = cleanedPhone.startsWith("91")
+      ? cleanedPhone
+      : "91" + cleanedPhone;
+
+    // Format message
+    const message = billData
+      ? formatBillMessage(billData)
+      : "Hello! I have your invoice ready.";
+
+    // Encode message for URL
+    const encodedMessage = encodeURIComponent(message);
+
+    // Open WhatsApp Web link directly
+    const whatsappUrl = `https://wa.me/${finalPhone}?text=${encodedMessage}`;
+
+    console.log(
+      "🟢 [WhatsAppService] Opening WhatsApp Web with link:",
+      whatsappUrl.substring(0, 50) + "...",
+    );
+
+    // Open in new tab
+    window.open(whatsappUrl, "_blank", "noopener,noreferrer");
+
+    return {
+      success: true,
+      message: "Opening WhatsApp Web...",
+    };
+  } catch (error) {
+    console.error("❌ [WhatsAppService] Direct WhatsApp open error:", error);
+    return {
+      success: false,
+      message: error.message,
+      error: error.message,
+    };
+  }
+};

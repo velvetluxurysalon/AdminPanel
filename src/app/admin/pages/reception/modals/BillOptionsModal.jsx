@@ -1,10 +1,11 @@
-import React from "react";
+import React, { useState } from "react";
 import { Download, Printer, Mail, MessageCircle, X } from "lucide-react";
 import {
   generateProfessionalBillPDF,
   downloadPDF,
   prepareInvoiceDataFromVisit,
 } from "../utils/pdfGenerator";
+import { openWhatsAppDirect } from "../../../services/whatsappService";
 
 const BillOptionsModal = ({ selectedVisit, onClose }) => {
   const handlePrintBill = async () => {
@@ -42,37 +43,34 @@ const BillOptionsModal = ({ selectedVisit, onClose }) => {
     return pdf.output("blob");
   };
 
-  // Share PDF via WhatsApp (Web Share API or fallback)
-  const handleShareWhatsApp = async () => {
+  // Share PDF via WhatsApp - Direct link opener
+  const handleShareWhatsApp = () => {
     try {
       const phone = (
         selectedVisit.customer?.phone ||
         selectedVisit.customer?.contactNo ||
         ""
       ).replace(/\D/g, "");
-      const pdfBlob = await createPDFBlob();
-      const file = new File(
-        [pdfBlob],
-        `Velvet_Premium_Invoice_${selectedVisit.invoiceId || selectedVisit.customer?.name || "Guest"}.pdf`,
-        { type: "application/pdf" },
-      );
-      if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        await navigator.share({
-          files: [file],
-          title: "Velvet Premium Unisex Salon Invoice",
-          text: "Please find your invoice attached.",
-        });
-      } else {
-        // Fallback: download PDF and instruct user to attach in WhatsApp
-        const invoiceData = prepareInvoiceDataFromVisit(selectedVisit);
-        downloadPDF(
-          await generateProfessionalBillPDF(invoiceData, selectedVisit),
-          `Velvet_Premium_Invoice_${selectedVisit.invoiceId || selectedVisit.customer?.name || "Guest"}.pdf`,
-        );
-        alert("PDF downloaded. Please attach and send via WhatsApp manually.");
+
+      if (!phone) {
+        alert("No phone number available for this customer");
+        return;
       }
-    } catch (err) {
-      alert("Unable to share PDF. Please try again.");
+
+      console.log("📱 [BillOptionsModal] Opening WhatsApp for:", phone);
+
+      // Prepare invoice data
+      const invoiceData = prepareInvoiceDataFromVisit(selectedVisit);
+
+      // Open WhatsApp directly with formatted message
+      const result = openWhatsAppDirect(phone, invoiceData);
+
+      if (!result.success) {
+        alert("Error: " + result.message);
+      }
+    } catch (error) {
+      console.error("❌ [BillOptionsModal] WhatsApp open error:", error);
+      alert("Error opening WhatsApp: " + error.message);
     }
   };
 
@@ -169,6 +167,14 @@ const BillOptionsModal = ({ selectedVisit, onClose }) => {
             to {
               opacity: 1;
               transform: scale(1) translateY(0);
+            }
+          }
+          @keyframes spin {
+            from {
+              transform: rotate(0deg);
+            }
+            to {
+              transform: rotate(360deg);
             }
           }
         `}</style>
@@ -289,7 +295,7 @@ const BillOptionsModal = ({ selectedVisit, onClose }) => {
             }}
             onMouseEnter={(e) => (e.target.style.background = "#20ba58")}
             onMouseLeave={(e) => (e.target.style.background = "#25d366")}
-            title="Share on WhatsApp"
+            title="Open WhatsApp with bill details"
           >
             <MessageCircle size={18} /> WhatsApp
           </button>
