@@ -7,12 +7,14 @@ import {
   createInvoice,
   checkInAppointment,
   deleteDocument,
+  getDocument,
 } from "../../utils/firebaseUtils";
 import { calculateTotals } from "./utils";
 import {
   sendCheckoutEmail,
   formatCheckoutDataForEmail,
 } from "../../services/emailService";
+import { generateAndStoreBillPDFWithRetry } from "../../services/billService";
 
 export const handleDeleteVisit = async (
   visitId,
@@ -216,6 +218,46 @@ export const handleCompletePayment = async (
 
     await createInvoice(invoiceData);
 
+    // Generate and store bill PDF in Firebase Storage
+    let billDownloadUrl = null;
+    try {
+      console.log("📄 [Handler] Generating and storing bill PDF...");
+
+      // Fetch the visit to get complete data for PDF generation
+      const visit = await getDocument("visits", invoiceData.visitId);
+
+      const billResult = await generateAndStoreBillPDFWithRetry(
+        invoiceData,
+        visit,
+      );
+
+      if (billResult.success) {
+        billDownloadUrl = billResult.url;
+        console.log(
+          "✅ [Handler] Bill PDF stored successfully:",
+          billDownloadUrl,
+        );
+
+        // Store the PDF URL in the invoice document for future reference
+        await updateVisit(invoiceData.visitId, {
+          billDownloadUrl: billDownloadUrl,
+          billStorageRef: billResult.storageRef,
+        });
+      } else {
+        console.warn(
+          "⚠️ [Handler] Failed to generate/store bill PDF:",
+          billResult.error,
+        );
+        // Don't fail the entire checkout if PDF generation fails
+      }
+    } catch (pdfError) {
+      console.error(
+        "❌ [Handler] PDF generation error (non-blocking):",
+        pdfError,
+      );
+      // Don't block the checkout if PDF generation fails
+    }
+
     // Update visit with ALL billing details and complete status
     // CRITICAL: Store totalAmount as the final discounted amount (not subtotal)
     await updateVisit(invoiceData.visitId, {
@@ -240,19 +282,24 @@ export const handleCompletePayment = async (
       loyaltyPointsEarned: invoiceData.loyaltyPointsEarned || 0,
 
       invoiceId: invoiceData.invoiceId,
+      billDownloadUrl: billDownloadUrl,
     });
 
     // Send checkout email to customer and admin
     try {
       console.log("📧 [Handler] Preparing email data...");
-      const emailData = formatCheckoutDataForEmail(invoiceData);
+      const emailData = {
+        ...invoiceData,
+        billDownloadUrl: billDownloadUrl,
+      };
+      const checkoutEmailData = formatCheckoutDataForEmail(emailData);
       console.log("📧 [Handler] Email data prepared:", {
-        customerName: emailData.customerName,
-        customerEmail: emailData.customerEmail,
-        totalAmount: emailData.totalAmount,
+        customerName: checkoutEmailData.customerName,
+        customerEmail: checkoutEmailData.customerEmail,
+        totalAmount: checkoutEmailData.totalAmount,
       });
 
-      const emailResult = await sendCheckoutEmail(emailData);
+      const emailResult = await sendCheckoutEmail(checkoutEmailData);
 
       if (emailResult.success) {
         console.log("✅ [Handler] Checkout email sent successfully");

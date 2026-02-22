@@ -232,62 +232,74 @@ export const sendWhatsAppMessage = async (phoneNumber, message) => {
 /**
  * Format a bill message for WhatsApp
  * @param {Object} billData - The bill data
+ * @param {string} billDownloadUrl - Optional Firebase Storage download URL for the PDF
  * @returns {string} Formatted WhatsApp message
  */
-export const formatBillMessage = (billData) => {
-  // Calculate subtotal from items if not provided or is 0
-  let calculatedSubtotal = billData.subtotal || 0;
+export const formatBillMessage = (billData, billDownloadUrl = null) => {
+  // Ensure all numeric values are numbers (not strings)
+  const paidAmount = Number(billData.paidAmount || 0);
+  const discountAmount = Number(billData.discountAmount || 0);
+  let calculatedSubtotal = Number(billData.subtotal || 0);
+
   if (calculatedSubtotal === 0 && billData.items && billData.items.length > 0) {
     calculatedSubtotal = billData.items.reduce((sum, item) => {
-      return sum + item.price * (item.quantity || 1);
+      return sum + Number(item.price || 0) * Number(item.quantity || 1);
     }, 0);
   }
 
   // Use provided totalAmount or calculate from subtotal minus discount
-  const discountAmount = billData.discountAmount || 0;
   const calculatedTotal =
-    billData.totalAmount || Math.max(0, calculatedSubtotal - discountAmount);
+    Number(billData.totalAmount || 0) ||
+    Math.max(0, calculatedSubtotal - discountAmount);
 
-  const balance = Math.max(0, calculatedTotal - (billData.paidAmount || 0));
+  const balance = Math.max(0, calculatedTotal - paidAmount);
 
-  let text = `*✨ VELVET PREMIUM UNISEX SALON - INVOICE ✨*\n\n`;
-  text += `👤 *Customer:* ${billData.customerName || "Valued Guest"}\n`;
-  text += `📅 *Date:* ${new Date().toLocaleDateString("en-IN")}\n`;
-  text += `📋 *Invoice #:* ${billData.invoiceId || "N/A"}\n\n`;
+  let text = `*VELVET PREMIUM UNISEX SALON - INVOICE*\n\n`;
+  text += `*Customer:* ${billData.customerName || "Valued Guest"}\n`;
+  text += `*Date:* ${new Date().toLocaleDateString("en-IN")}\n`;
+  text += `*Invoice #:* ${billData.invoiceId || "N/A"}\n\n`;
 
   text += `━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-  text += `*📦 SERVICES & PRODUCTS*\n`;
+  text += `*SERVICES & PRODUCTS*\n`;
   text += `━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
 
   if (billData.items && billData.items.length > 0) {
     billData.items.forEach((item) => {
-      const itemTotal = (item.price * (item.quantity || 1)).toFixed(2);
-      text += `• ${item.name} x${item.quantity || 1}\n  ₹${itemTotal}\n`;
+      const itemPrice = Number(item.price || 0);
+      const itemQuantity = Number(item.quantity || 1);
+      const itemTotal = (itemPrice * itemQuantity).toFixed(2);
+      text += `• ${item.name} x${itemQuantity}\n  ₹${itemTotal}\n`;
     });
   }
 
   text += `\n━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-  text += `💰 *Subtotal:* ₹${calculatedSubtotal.toFixed(2)}\n`;
+  text += `*Subtotal:* ₹${calculatedSubtotal.toFixed(2)}\n`;
 
   if (discountAmount > 0) {
-    text += `✂️ *Discount:* -₹${discountAmount.toFixed(2)}\n`;
+    text += `*Discount:* -₹${discountAmount.toFixed(2)}\n`;
   }
 
-  text += `\n*🎯 TOTAL: ₹${calculatedTotal.toFixed(2)}*\n`;
-  text += `✅ *Amount Paid:* ₹${(billData.paidAmount || 0).toFixed(2)}\n`;
+  text += `\n*TOTAL: ₹${calculatedTotal.toFixed(2)}*\n`;
+  text += `*Amount Paid:* ₹${paidAmount.toFixed(2)}\n`;
 
   if (balance > 0.01) {
-    text += `⏳ *Balance Due:* ₹${balance.toFixed(2)}\n`;
+    text += `*Balance Due:* ₹${balance.toFixed(2)}\n`;
   } else {
-    text += `✓ *Status:* ✅ PAID IN FULL\n`;
+    text += `*Status:* PAID IN FULL\n`;
   }
 
-  text += `💳 *Payment Method:* ${(billData.paymentMode || "Cash").toUpperCase()}\n`;
+  text += `*Payment Method:* ${(billData.paymentMode || "Cash").toUpperCase()}\n`;
   text += `\n━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-  text += `✨ *Thank you for choosing Velvet Premium Unisex Salon!*\n`;
-  text += `📞 *For queries:* 9345678646\n`;
-  text += `✉️ *Email:* Velvetluxurysalon@gmail.com\n`;
-  text += `🕐 *Hours:* 8:00 AM - 9:00 PM`;
+
+  // Add bill download link if available
+  if (billDownloadUrl) {
+    text += `*Download Your Bill Here:* ${billDownloadUrl}\n\n`;
+  }
+
+  text += `*Thank you for choosing Velvet Premium Unisex Salon!*\n`;
+  text += `*Book Your Next Appointment:* https://velvetluxurysalon.in\n`;
+  text += `*For queries:* 9345678646\n`;
+  text += `*Email:* Velvetluxurysalon@gmail.com`;
 
   return text;
 };
@@ -296,8 +308,13 @@ export const formatBillMessage = (billData) => {
  * Direct WhatsApp Web link opener - Opens chat with formatted message
  * @param {string} phoneNumber - Customer phone number
  * @param {Object} billData - Bill data for formatted message
+ * @param {string} billDownloadUrl - Optional Firebase Storage download URL for the PDF
  */
-export const openWhatsAppDirect = (phoneNumber, billData) => {
+export const openWhatsAppDirect = (
+  phoneNumber,
+  billData,
+  billDownloadUrl = null,
+) => {
   try {
     if (!phoneNumber) {
       throw new Error("Phone number is required");
@@ -314,9 +331,9 @@ export const openWhatsAppDirect = (phoneNumber, billData) => {
       ? cleanedPhone
       : "91" + cleanedPhone;
 
-    // Format message
+    // Format message with bill download URL
     const message = billData
-      ? formatBillMessage(billData)
+      ? formatBillMessage(billData, billDownloadUrl)
       : "Hello! I have your invoice ready.";
 
     // Encode message for URL

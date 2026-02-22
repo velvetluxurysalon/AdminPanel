@@ -18,6 +18,7 @@ import { getDocument } from "../../../utils/firebaseUtils";
 const BillOptionsModal = ({ selectedVisit, onClose }) => {
   const [invoiceData, setInvoiceData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [visitSnapshot, setVisitSnapshot] = useState(selectedVisit);
 
   // Fetch invoice data from Firestore
   useEffect(() => {
@@ -42,6 +43,29 @@ const BillOptionsModal = ({ selectedVisit, onClose }) => {
 
     fetchInvoiceData();
   }, [selectedVisit.invoiceId]);
+
+  useEffect(() => {
+    let mounted = true;
+    setVisitSnapshot(selectedVisit);
+
+    const fetchLatestVisit = async () => {
+      if (!selectedVisit?.id) return;
+      try {
+        const visitDoc = await getDocument("visits", selectedVisit.id);
+        if (visitDoc && mounted) {
+          setVisitSnapshot((prev) => ({ ...prev, ...visitDoc }));
+        }
+      } catch (error) {
+        console.error("Error fetching latest visit:", error);
+      }
+    };
+
+    fetchLatestVisit();
+
+    return () => {
+      mounted = false;
+    };
+  }, [selectedVisit]);
 
   // Use invoice data if available, otherwise fall back to visit data
   const displayData = invoiceData || selectedVisit;
@@ -107,9 +131,17 @@ const BillOptionsModal = ({ selectedVisit, onClose }) => {
   // Share PDF via WhatsApp - Direct link opener
   const handleShareWhatsApp = () => {
     try {
+      const visitForShare = visitSnapshot || selectedVisit;
+      if (!visitForShare) {
+        alert("Unable to share the invoice right now.");
+        return;
+      }
+
       const phone = (
-        selectedVisit.customer?.phone ||
-        selectedVisit.customer?.contactNo ||
+        visitForShare.customer?.phone ||
+        visitForShare.customer?.contactNo ||
+        visitForShare.customerPhone ||
+        visitForShare.phone ||
         ""
       ).replace(/\D/g, "");
 
@@ -120,11 +152,13 @@ const BillOptionsModal = ({ selectedVisit, onClose }) => {
 
       console.log("📱 [BillOptionsModal] Opening WhatsApp for:", phone);
 
-      // Prepare invoice data
-      const pdfInvoiceData = prepareInvoiceDataFromVisit(selectedVisit);
+      const pdfInvoiceData =
+        invoiceData || prepareInvoiceDataFromVisit(visitForShare);
 
-      // Open WhatsApp directly with formatted message
-      const result = openWhatsAppDirect(phone, pdfInvoiceData);
+      const billDownloadUrl =
+        invoiceData?.billDownloadUrl || visitForShare.billDownloadUrl || null;
+
+      const result = openWhatsAppDirect(phone, pdfInvoiceData, billDownloadUrl);
 
       if (!result.success) {
         alert("Error: " + result.message);

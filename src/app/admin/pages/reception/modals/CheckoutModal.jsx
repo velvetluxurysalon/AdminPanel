@@ -31,6 +31,7 @@ import {
   sendBillViaWhatsApp,
   openWhatsAppDirect,
 } from "../../../services/whatsappService";
+import { generateAndStoreBillPDFWithRetry } from "../../../services/billService";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../../../../../firebaseConfig";
 
@@ -59,7 +60,7 @@ const CheckoutModal = ({
   const [sendingWhatsApp, setSendingWhatsApp] = useState(false);
   const [whatsappSent, setWhatsappSent] = useState(false);
   const [whatsappError, setWhatsappError] = useState("");
-  const [autoSendWhatsApp, setAutoSendWhatsApp] = useState(true);
+  const [autoSendWhatsApp, setAutoSendWhatsApp] = useState(false); // Disabled temporarily
 
   // Fetch latest customer data including loyaltyPoints and membershipType
   useEffect(() => {
@@ -108,16 +109,18 @@ const CheckoutModal = ({
   }, [discountType]);
 
   // Auto-send WhatsApp bill when payment is completed
+  // TEMPORARILY DISABLED: Twilio API endpoint not yet configured
   useEffect(() => {
-    if (
-      paymentCompleted &&
-      invoiceData &&
-      autoSendWhatsApp &&
-      !whatsappSent &&
-      !sendingWhatsApp
-    ) {
-      handleAutoSendWhatsApp();
-    }
+    // Auto-send disabled until backend API is ready
+    // if (
+    //   paymentCompleted &&
+    //   invoiceData &&
+    //   autoSendWhatsApp &&
+    //   !whatsappSent &&
+    //   !sendingWhatsApp
+    // ) {
+    //   handleAutoSendWhatsApp();
+    // }
   }, [paymentCompleted, invoiceData, autoSendWhatsApp]);
 
   // Function to handle automatic WhatsApp sending
@@ -139,7 +142,7 @@ const CheckoutModal = ({
       }
 
       console.log(
-        "📱 [CheckoutModal] Auto-sending WhatsApp bill to:",
+        "?? [CheckoutModal] Auto-sending WhatsApp bill to:",
         phoneNumber,
       );
 
@@ -155,15 +158,15 @@ const CheckoutModal = ({
       );
 
       if (result.success) {
-        console.log("✅ [CheckoutModal] WhatsApp sent successfully");
+        console.log("? [CheckoutModal] WhatsApp sent successfully");
         setWhatsappSent(true);
         setWhatsappError("");
       } else {
-        console.error("❌ [CheckoutModal] WhatsApp send failed:", result.error);
+        console.error("? [CheckoutModal] WhatsApp send failed:", result.error);
         setWhatsappError(result.message || "Failed to send WhatsApp");
       }
     } catch (error) {
-      console.error("❌ [CheckoutModal] Error auto-sending WhatsApp:", error);
+      console.error("? [CheckoutModal] Error auto-sending WhatsApp:", error);
       setWhatsappError(error.message || "Error sending WhatsApp bill");
     } finally {
       setSendingWhatsApp(false);
@@ -181,7 +184,7 @@ const CheckoutModal = ({
     // Apply coupon discount
     finalDiscount = couponData.discountAmount || 0;
     discountDescription = `Coupon: ${couponCode} (${couponData.discountType === "percentage" ? couponData.discountValue + "%" : "₹" + couponData.discountValue})`;
-    console.log("💰 [CheckoutModal] Coupon Discount Debug:", {
+    console.log("?? [CheckoutModal] Coupon Discount Debug:", {
       discountType,
       couponCode,
       couponData,
@@ -215,7 +218,7 @@ const CheckoutModal = ({
 
   // Debug logging
   if (discountType === "coupon" && couponData) {
-    console.log("📊 [CheckoutModal] Total Calculation:", {
+    console.log("?? [CheckoutModal] Total Calculation:", {
       subtotal: baseTotals.subtotal,
       finalDiscount,
       totalAmount,
@@ -255,7 +258,7 @@ const CheckoutModal = ({
           discountValue: result.discountValue,
         });
         setCouponError("");
-        console.log("✅ Coupon validated:", {
+        console.log("? Coupon validated:", {
           code: couponCode,
           discountAmount: result.discountAmount,
           originalDiscountAmount: result.originalDiscountAmount,
@@ -310,7 +313,7 @@ const CheckoutModal = ({
       // Final calculation: Starting Balance - Deducted + Earned
       const finalLoyaltyPoints = currentPoints - pointsDeducted + pointsEarned;
 
-      console.log("🪙 [Points Update Debug]", {
+      console.log("?? [Points Update Debug]", {
         currentPoints,
         pointsDeducted,
         pointsEarned,
@@ -394,7 +397,7 @@ const CheckoutModal = ({
             : 0,
       };
 
-      console.log("💾 [CheckoutModal] Invoice Data being created:", {
+      console.log("?? [CheckoutModal] Invoice Data being created:", {
         customerName: newInvoiceData.customerName,
         customerEmail: newInvoiceData.customerEmail,
         totalAmount: newInvoiceData.totalAmount,
@@ -402,27 +405,61 @@ const CheckoutModal = ({
         itemsCount: newInvoiceData.items?.length,
       });
 
+      // Set payment completed immediately (before PDF generation)
+      setInvoiceData(newInvoiceData);
+      setPaymentCompleted(true);
+
+      // Generate and store bill PDF in Firebase Storage (asynchronously in background)
+      // Don't await this - let it happen while user sees the success screen
+      (async () => {
+        try {
+          console.log(
+            "?? [CheckoutModal] Generating and storing bill PDF in background...",
+          );
+          const billResult = await generateAndStoreBillPDFWithRetry(
+            newInvoiceData,
+            visit,
+          );
+
+          if (billResult.success) {
+            // Update invoice data with PDF URL after generation completes
+            setInvoiceData((prevData) => ({
+              ...prevData,
+              billDownloadUrl: billResult.url,
+              billStorageRef: billResult.storageRef,
+            }));
+            console.log(
+              "? [CheckoutModal] Bill PDF stored successfully:",
+              billResult.url,
+            );
+          } else {
+            console.warn(
+              "?? [CheckoutModal] Failed to generate/store bill PDF:",
+              billResult.error,
+            );
+          }
+        } catch (pdfError) {
+          console.error("? [CheckoutModal] PDF generation error:", pdfError);
+        }
+      })();
+
       // Increment coupon usage if a coupon was applied
       if (discountType === "coupon" && couponCode) {
         try {
           await incrementCouponUsage(couponCode);
-          console.log("✅ Coupon usage incremented:", couponCode);
+          console.log("? Coupon usage incremented:", couponCode);
         } catch (error) {
           console.error("Error incrementing coupon usage:", error);
-          // Don't fail the payment if coupon increment fails
         }
       }
-
-      setInvoiceData(newInvoiceData);
-      setPaymentCompleted(true);
     } catch (error) {
       console.error("Error completing payment:", error);
       alert("Error processing payment. Please try again.");
     }
   };
 
-  const handleDoneClick = () => {
-    // Reset payment state before closing
+  const handleCloseModal = () => {
+    // Reset all state before closing
     setPaymentCompleted(false);
     setDiscountType("none");
     setDiscountValue("");
@@ -435,47 +472,65 @@ const CheckoutModal = ({
     setCouponError("");
     setInvoiceData(null);
 
-    // Call parent callback with invoice data
+    // Close the modal
+    onClose();
+  };
+
+  const handleDoneClick = () => {
+    // Call parent callback first to close the modal immediately
     if (invoiceData) {
       onPaymentComplete(invoiceData);
     } else {
       onClose();
     }
+
+    // Reset payment state after closing
+    setPaymentCompleted(false);
+    setDiscountType("none");
+    setDiscountValue("");
+    setAmountPaid("");
+    setPaymentMethod("cash");
+    setNotes("");
+    setCoinsUsed("");
+    setCouponCode("");
+    setCouponData(null);
+    setCouponError("");
+    setInvoiceData(null);
   };
 
   const generateBillTextForShare = () => {
     const balance = Math.max(0, totalAmount - (parseFloat(amountPaid) || 0));
     let text = `*VELVET PREMIUM UNISEX SALON - INVOICE*\n\n`;
-    text += `👤 Customer: ${visit.customer?.name || visit.customerName}\n`;
-    text += `📱 Phone: ${visit.customer?.phone || visit.customer?.contactNo || visit.customerPhone}\n`;
-    text += `📧 Email: ${visit.customer?.email || visit.customerEmail || "N/A"}\n`;
-    text += `📅 Date: ${new Date().toLocaleDateString("en-IN")}\n\n`;
-    text += `━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+    text += `?? Customer: ${visit.customer?.name || visit.customerName}\n`;
+    text += `?? Phone: ${visit.customer?.phone || visit.customer?.contactNo || visit.customerPhone}\n`;
+    text += `?? Email: ${visit.customer?.email || visit.customerEmail || "N/A"}\n`;
+    text += `?? Date: ${new Date().toLocaleDateString("en-IN")}\n\n`;
+    text += `???????????????????????????\n`;
     text += `*SERVICES & PRODUCTS*\n`;
-    text += `━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+    text += `???????????????????????????\n`;
 
     visit.items?.forEach((item) => {
-      text += `• ${item.name} x${item.quantity}\n  ₹${(item.price * item.quantity).toFixed(2)}\n`;
+      text += `? ${item.name} x${item.quantity}\n  ?${(item.price * item.quantity).toFixed(2)}\n`;
     });
 
-    text += `\n━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-    text += `💰 Subtotal: ₹${baseTotals.subtotal.toFixed(2)}\n`;
+    text += `\n???????????????????????????\n`;
+    text += `?? Subtotal: ?${baseTotals.subtotal.toFixed(2)}\n`;
     if (finalDiscount > 0) {
-      text += `✂️ Discount: -₹${finalDiscount.toFixed(2)}\n`;
+      text += `?? Discount: -?${finalDiscount.toFixed(2)}\n`;
     }
     text += `\n*TOTAL: ₹${totalAmount.toFixed(2)}*\n`;
-    text += `✅ Amount Paid: ₹${(parseFloat(amountPaid) || 0).toFixed(2)}\n`;
+    text += `💳 Amount Paid: ₹${(parseFloat(amountPaid) || 0).toFixed(2)}\n`;
     if (balance > 0) {
-      text += `⏳ Balance Due: ₹${balance.toFixed(2)}\n`;
+      text += `⚠️ Balance Due: ₹${balance.toFixed(2)}\n`;
     } else {
-      text += `✓ Status: PAID IN FULL\n`;
+      text += `? Status: PAID IN FULL\n`;
     }
-    text += `💳 Payment: ${paymentMethod.toUpperCase()}\n`;
-    text += `\n━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-    text += `✨ Thank you for choosing Velvet Premium Unisex Salon!\n`;
-    text += `📞 For queries: 9345678646\n`;
-    text += `✉️ Velvetluxurysalon@gmail.com\n`;
-    text += `🕐 Working Hours: 8:00 AM - 9:00 PM`;
+    text += `?? Payment: ${paymentMethod.toUpperCase()}\n`;
+    text += `\n???????????????????????????\n`;
+    text += `? Thank you for choosing Velvet Premium Unisex Salon!\n`;
+    text += `?? For queries: 9345678646\n`;
+    text += `?? Velvetluxurysalon@gmail.com\n`;
+    text += `?? Working Hours: 8:00 AM - 9:00 PM`;
 
     return text;
   };
@@ -573,8 +628,15 @@ const CheckoutModal = ({
           status: amountPaid >= totalAmount ? "paid" : "partial",
         });
 
-      // Open WhatsApp directly with formatted message
-      const result = openWhatsAppDirect(phone, shareInvoiceData);
+      // Get bill download URL if available from invoiceData
+      const billDownloadUrl = invoiceData?.billDownloadUrl || null;
+
+      // Open WhatsApp directly with formatted message including bill link
+      const result = openWhatsAppDirect(
+        phone,
+        shareInvoiceData,
+        billDownloadUrl,
+      );
 
       if (!result.success) {
         alert("Error: " + result.message);
@@ -629,6 +691,9 @@ const CheckoutModal = ({
   };
 
   if (paymentCompleted) {
+    const paidAmount = parseFloat(amountPaid) || 0;
+    const balanceDue = Math.max(0, totalAmount - paidAmount);
+
     return (
       <div
         style={{
@@ -637,284 +702,280 @@ const CheckoutModal = ({
           left: 0,
           right: 0,
           bottom: 0,
-          background: "rgba(0, 0, 0, 0.5)",
+          background: "rgba(0,0,0,0.45)",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
           zIndex: 1000,
-          backdropFilter: "blur(4px)",
+          backdropFilter: "blur(2px)",
         }}
       >
+        <style>{`@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}`}</style>
         <div
           style={{
             background: "white",
-            borderRadius: "1rem",
-            padding: "2.5rem",
-            maxWidth: "450px",
+            borderRadius: "0.75rem",
             width: "90%",
-            boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1)",
-            textAlign: "center",
+            maxWidth: "480px",
+            maxHeight: "88vh",
+            overflowY: "auto",
+            boxShadow: "0 8px 32px rgba(0,0,0,0.14)",
+            display: "flex",
+            flexDirection: "column",
           }}
         >
+          {/* Header */}
           <div
             style={{
-              width: "60px",
-              height: "60px",
-              background: "#f0fdf4",
-              borderRadius: "50%",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              margin: "0 auto 1.5rem",
-              color: "#16a34a",
-            }}
-          >
-            <Check size={32} />
-          </div>
-
-          <h2
-            style={{
-              color: "#111827",
-              marginBottom: "0.5rem",
-              fontSize: "1.5rem",
-              fontWeight: "700",
-            }}
-          >
-            Payment Complete
-          </h2>
-          <p
-            style={{
-              color: "#6b7280",
-              marginBottom: "1.5rem",
-              fontSize: "1rem",
-            }}
-          >
-            Invoice generated for {visit.customer?.name || visit.customerName}
-          </p>
-
-          {/* WhatsApp Status Section */}
-          {sendingWhatsApp && (
-            <div
-              style={{
-                background: "#fef3c7",
-                border: "1px solid #fcd34d",
-                borderRadius: "0.5rem",
-                padding: "0.875rem",
-                marginBottom: "1.5rem",
-                display: "flex",
-                alignItems: "center",
-                gap: "0.75rem",
-                color: "#92400e",
-                fontSize: "0.875rem",
-              }}
-            >
-              <Loader
-                size={16}
-                style={{ animation: "spin 1s linear infinite" }}
-              />
-              <span>Sending bill via WhatsApp...</span>
-            </div>
-          )}
-
-          {whatsappSent && (
-            <div
-              style={{
-                background: "#dcfce7",
-                border: "1px solid #86efac",
-                borderRadius: "0.5rem",
-                padding: "0.875rem",
-                marginBottom: "1.5rem",
-                display: "flex",
-                alignItems: "center",
-                gap: "0.75rem",
-                color: "#166534",
-                fontSize: "0.875rem",
-              }}
-            >
-              <Check size={16} />
-              <span>✅ Bill sent successfully via WhatsApp!</span>
-            </div>
-          )}
-
-          {whatsappError && (
-            <div
-              style={{
-                background: "#fee2e2",
-                border: "1px solid #fca5a5",
-                borderRadius: "0.5rem",
-                padding: "0.875rem",
-                marginBottom: "1.5rem",
-                color: "#991b1b",
-                fontSize: "0.875rem",
-              }}
-            >
-              <p style={{ margin: 0, marginBottom: "0.5rem" }}>
-                ⚠️ {whatsappError}
-              </p>
-              <button
-                onClick={handleAutoSendWhatsApp}
-                disabled={sendingWhatsApp}
-                style={{
-                  fontSize: "0.75rem",
-                  padding: "0.35rem 0.75rem",
-                  background: "#dc2626",
-                  color: "white",
-                  border: "none",
-                  borderRadius: "0.25rem",
-                  cursor: sendingWhatsApp ? "not-allowed" : "pointer",
-                  opacity: sendingWhatsApp ? 0.6 : 1,
-                }}
-              >
-                Retry Send
-              </button>
-            </div>
-          )}
-
-          {/* Auto-send WhatsApp Toggle */}
-          <div
-            style={{
-              background: "#f3f4f6",
-              borderRadius: "0.5rem",
-              padding: "0.75rem",
-              marginBottom: "1.5rem",
+              padding: "0.875rem 1.125rem",
+              borderBottom: "1px solid #e5e7eb",
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
-              fontSize: "0.875rem",
             }}
           >
-            <label
+            <div
+              style={{ display: "flex", alignItems: "center", gap: "0.625rem" }}
+            >
+              <div
+                style={{
+                  width: "26px",
+                  height: "26px",
+                  background: "#f0fdf4",
+                  border: "1.5px solid #86efac",
+                  borderRadius: "50%",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
+                }}
+              >
+                <Check size={13} color="#16a34a" />
+              </div>
+              <div>
+                <div
+                  style={{
+                    fontWeight: "600",
+                    fontSize: "0.9rem",
+                    color: "#111827",
+                  }}
+                >
+                  Payment Complete
+                </div>
+                <div style={{ fontSize: "0.7rem", color: "#9ca3af" }}>
+                  {visit.customer?.name || visit.customerName} ₹{" "}
+                  {invoiceData?.invoiceId || ""}
+                </div>
+              </div>
+            </div>
+            <button
+              onClick={handleDoneClick}
               style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "0.5rem",
-                color: "#374151",
-                fontWeight: "500",
+                background: "none",
+                border: "none",
                 cursor: "pointer",
+                color: "#9ca3af",
+                padding: "0.25rem",
+                display: "flex",
               }}
             >
-              <input
-                type="checkbox"
-                checked={autoSendWhatsApp}
-                onChange={(e) => setAutoSendWhatsApp(e.target.checked)}
-                style={{
-                  width: "18px",
-                  height: "18px",
-                  cursor: "pointer",
-                }}
-              />
-              <MessageCircle size={14} style={{ color: "#16a34a" }} />
-              <span>Auto-send to WhatsApp</span>
-            </label>
+              <X size={16} />
+            </button>
           </div>
 
+          {/* Items */}
+          <div style={{ padding: "0.875rem 1.125rem" }}>
+            <p
+              style={{
+                margin: "0 0 0.4rem 0",
+                fontSize: "0.65rem",
+                fontWeight: "700",
+                color: "#9ca3af",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+              }}
+            >
+              Items
+            </p>
+            <div style={{ maxHeight: "130px", overflowY: "auto" }}>
+              {visit.items?.map((item, idx) => (
+                <div
+                  key={idx}
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    padding: "0.275rem 0",
+                    borderBottom: "1px solid #f3f4f6",
+                    fontSize: "0.8125rem",
+                  }}
+                >
+                  <span style={{ color: "#374151" }}>
+                    {item.name} ₹{item.quantity || 1}
+                  </span>
+                  <span style={{ color: "#111827", fontWeight: "600" }}>
+                    ₹{(item.price * (item.quantity || 1)).toFixed(2)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Totals */}
           <div
             style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: "0.75rem",
-              marginBottom: "1.5rem",
+              padding: "0.75rem 1.125rem",
+              background: "#f9fafb",
+              borderTop: "1px solid #f3f4f6",
+              borderBottom: "1px solid #e5e7eb",
             }}
           >
-            <button
-              onClick={handlePrintBill}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "0.5rem",
-                padding: "0.75rem",
-                background: "#f9fafb",
-                color: "#374151",
-                border: "1px solid #e5e7eb",
-                borderRadius: "0.5rem",
-                fontWeight: "600",
-                fontSize: "0.875rem",
-                cursor: "pointer",
-              }}
-            >
-              <Printer size={18} /> Print
-            </button>
-            <button
-              onClick={handleDownloadBill}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "0.5rem",
-                padding: "0.75rem",
-                background: "#f9fafb",
-                color: "#374151",
-                border: "1px solid #e5e7eb",
-                borderRadius: "0.5rem",
-                fontWeight: "600",
-                fontSize: "0.875rem",
-                cursor: "pointer",
-              }}
-            >
-              <Download size={18} /> Download
-            </button>
-            <button
-              onClick={handleShareWhatsApp}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "0.5rem",
-                padding: "0.75rem",
-                background: "#f9fafb",
-                color: "#16a34a",
-                border: "1px solid #e5e7eb",
-                borderRadius: "0.5rem",
-                fontWeight: "600",
-                fontSize: "0.875rem",
-                cursor: "pointer",
-              }}
-            >
-              <MessageCircle size={18} /> WhatsApp
-            </button>
-            <button
-              onClick={handleShareEmail}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "0.5rem",
-                padding: "0.75rem",
-                background: "#f9fafb",
-                color: "#f59e0b",
-                border: "1px solid #e5e7eb",
-                borderRadius: "0.5rem",
-                fontWeight: "600",
-                fontSize: "0.875rem",
-                cursor: "pointer",
-              }}
-            >
-              <Mail size={18} /> Email
-            </button>
+            {[
+              {
+                label: "Subtotal",
+                value: `₹${baseTotals.subtotal.toFixed(2)}`,
+                muted: true,
+              },
+              ...(finalDiscount > 0
+                ? [
+                    {
+                      label: "Discount",
+                      value: `-₹${finalDiscount.toFixed(2)}`,
+                      color: "#dc2626",
+                      muted: false,
+                    },
+                  ]
+                : []),
+              {
+                label: "Total",
+                value: `₹${totalAmount.toFixed(2)}`,
+                bold: true,
+              },
+              {
+                label: "Paid",
+                value: `₹${paidAmount.toFixed(2)}`,
+                color: "#059669",
+                bold: true,
+              },
+              balanceDue > 0
+                ? {
+                    label: "Balance Due",
+                    value: `₹${balanceDue.toFixed(2)}`,
+                    color: "#dc2626",
+                  }
+                : { label: "Status", value: "✅ Fully Paid", color: "#059669" },
+            ].map((row, i) => (
+              <div
+                key={i}
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  fontSize: row.bold ? "0.875rem" : "0.8rem",
+                  fontWeight: row.bold ? "700" : "400",
+                  marginBottom: "0.25rem",
+                  paddingTop: row.bold && i > 0 ? "0.35rem" : 0,
+                  borderTop: row.bold && i > 0 ? "1px solid #e5e7eb" : "none",
+                }}
+              >
+                <span style={{ color: "#6b7280" }}>{row.label}</span>
+                <span style={{ color: row.color || "#111827" }}>
+                  {row.value}
+                </span>
+              </div>
+            ))}
           </div>
 
-          <button
-            onClick={handleDoneClick}
+          {/* Share actions */}
+          <div
             style={{
-              width: "100%",
-              padding: "0.875rem",
-              background: "#111827",
-              color: "white",
-              border: "none",
-              borderRadius: "0.5rem",
-              fontWeight: "600",
-              fontSize: "1rem",
-              cursor: "pointer",
+              padding: "0.875rem 1.125rem",
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: "0.4rem",
             }}
           >
-            Close
-          </button>
+            {[
+              { label: "Print", icon: Printer, onClick: handlePrintBill },
+              {
+                label: "Download",
+                icon: Download,
+                onClick: handleDownloadBill,
+              },
+              {
+                label: invoiceData?.billDownloadUrl ? "WhatsApp" : "Preparing?",
+                icon: invoiceData?.billDownloadUrl ? MessageCircle : Loader,
+                onClick: invoiceData?.billDownloadUrl
+                  ? handleShareWhatsApp
+                  : undefined,
+                disabled: !invoiceData?.billDownloadUrl,
+                color: invoiceData?.billDownloadUrl ? "#16a34a" : "#9ca3af",
+              },
+              { label: "Email", icon: Mail, onClick: handleShareEmail },
+            ].map((btn) => {
+              const Ic = btn.icon;
+              return (
+                <button
+                  key={btn.label}
+                  onClick={btn.onClick}
+                  disabled={btn.disabled}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "0.35rem",
+                    padding: "0.5rem",
+                    background: btn.disabled ? "#f9fafb" : "white",
+                    color: btn.color || "#374151",
+                    border: "1px solid #e5e7eb",
+                    borderRadius: "0.375rem",
+                    fontWeight: "600",
+                    fontSize: "0.8rem",
+                    cursor: btn.disabled ? "not-allowed" : "pointer",
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!btn.disabled)
+                      e.currentTarget.style.background = "#f9fafb";
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!btn.disabled)
+                      e.currentTarget.style.background = "white";
+                  }}
+                >
+                  <Ic
+                    size={14}
+                    style={
+                      btn.disabled
+                        ? { animation: "spin 1s linear infinite" }
+                        : {}
+                    }
+                  />{" "}
+                  {btn.label}
+                </button>
+              );
+            })}
+          </div>
+
+          <div style={{ padding: "0 1.125rem 1rem" }}>
+            <button
+              onClick={handleDoneClick}
+              style={{
+                width: "100%",
+                padding: "0.6rem",
+                background: "#111827",
+                color: "white",
+                border: "none",
+                borderRadius: "0.5rem",
+                fontWeight: "600",
+                fontSize: "0.875rem",
+                cursor: "pointer",
+              }}
+            >
+              Done
+            </button>
+          </div>
         </div>
       </div>
     );
   }
-
   return (
     <div
       style={{
@@ -923,753 +984,509 @@ const CheckoutModal = ({
         left: 0,
         right: 0,
         bottom: 0,
-        background: "rgba(0, 0, 0, 0.5)",
+        background: "rgba(0,0,0,0.45)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
         zIndex: 1000,
+        backdropFilter: "blur(2px)",
       }}
     >
       <style>{`
         input[type="number"]::-webkit-outer-spin-button,
-        input[type="number"]::-webkit-inner-spin-button {
-          -webkit-appearance: none;
-          margin: 0;
-        }
-        input[type="number"] {
-          -moz-appearance: textfield;
-        }
-        @keyframes spin {
-          from {
-            transform: rotate(0deg);
-          }
-          to {
-            transform: rotate(360deg);
-          }
-        }
+        input[type="number"]::-webkit-inner-spin-button { -webkit-appearance:none; margin:0; }
+        input[type="number"] { -moz-appearance:textfield; }
+        @keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
       `}</style>
+      {/* Modal card ? two-column layout */}
       <div
         style={{
-          position: "relative",
           background: "white",
-          borderRadius: "1rem",
-          width: "90%",
-          maxWidth: "900px",
+          borderRadius: "0.75rem",
+          width: "96%",
+          maxWidth: "860px",
           maxHeight: "90vh",
-          overflowY: "auto",
-          boxShadow: "0 25px 50px rgba(0, 0, 0, 0.2)",
+          overflow: "hidden",
+          display: "flex",
+          flexDirection: "column",
+          boxShadow: "0 8px 32px rgba(0,0,0,0.14)",
         }}
       >
         {/* HEADER */}
         <div
           style={{
-            background: "linear-gradient(135deg, #7c3aed 0%, #db2777 100%)",
-            padding: "2.5rem 2rem",
-            borderRadius: "1rem 1rem 0 0",
+            padding: "0.875rem 1.125rem",
+            borderBottom: "1px solid #e5e7eb",
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
-            position: "relative",
-            overflow: "hidden",
+            background: "white",
+            flexShrink: 0,
           }}
         >
-          <div
-            style={{
-              position: "absolute",
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              background:
-                'url("data:image/svg+xml,%3Csvg width="20" height="20" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="%23ffffff" fill-opacity="0.05" fill-rule="evenodd"%3E%3Ccircle cx="3" cy="3" r="3"/%3E%3Ccircle cx="13" cy="13" r="3"/%3E%3C/g%3E%3C/svg%3E")',
-              opacity: 0.2,
-            }}
-          ></div>
-          <div style={{ position: "relative", zIndex: 1 }}>
+          <div>
             <h2
               style={{
                 margin: 0,
-                color: "white",
-                fontSize: "1.75rem",
-                fontWeight: "800",
-                letterSpacing: "-0.5px",
+                fontSize: "1rem",
+                fontWeight: "600",
+                color: "#111827",
               }}
             >
-              Complete Checkout
+              Checkout
             </h2>
             <p
               style={{
-                margin: "0.5rem 0 0 0",
-                color: "rgba(255,255,255,0.8)",
-                fontSize: "0.875rem",
-                fontWeight: "600",
-                textTransform: "uppercase",
-                letterSpacing: "1px",
+                margin: 0,
+                fontSize: "0.7rem",
+                color: "#9ca3af",
+                marginTop: "1px",
               }}
             >
-              Invoice #{visit.id?.slice(-6).toUpperCase()}
+              {visit.customer?.name} &nbsp;·&nbsp; #
+              {visit.id?.slice(-6).toUpperCase()}
             </p>
           </div>
           <button
-            onClick={onClose}
+            onClick={handleCloseModal}
             style={{
-              background: "rgba(255,255,255,0.2)",
+              background: "none",
               border: "none",
               cursor: "pointer",
-              fontSize: "1.5rem",
-              color: "white",
-              width: "36px",
-              height: "36px",
-              borderRadius: "50%",
+              color: "#9ca3af",
+              padding: "0.25rem",
               display: "flex",
               alignItems: "center",
-              justifyContent: "center",
-              transition: "all 0.2s",
             }}
-            onMouseEnter={(e) =>
-              (e.currentTarget.style.background = "rgba(255,255,255,0.3)")
-            }
-            onMouseLeave={(e) =>
-              (e.currentTarget.style.background = "rgba(255,255,255,0.2)")
-            }
           >
-            <X size={20} />
+            <X size={18} />
           </button>
         </div>
 
-        <div
-          style={{
-            padding: "1.5rem",
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
-            gap: "2rem",
-          }}
-        >
-          {/* LEFT COLUMN - CUSTOMER & ITEMS */}
-          <div>
-            {/* CUSTOMER INFO */}
+        {/* BODY ? two columns */}
+        <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
+          {/* LEFT ? customer + items + totals */}
+          <div
+            style={{
+              width: "300px",
+              minWidth: "300px",
+              borderRight: "1px solid #e5e7eb",
+              display: "flex",
+              flexDirection: "column",
+              overflow: "hidden",
+            }}
+          >
+            {/* Customer strip */}
             <div
               style={{
-                background: "linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%)",
-                padding: "1.25rem",
-                borderRadius: "0.875rem",
-                marginBottom: "1.5rem",
-                borderLeft: "4px solid #667eea",
+                padding: "0.75rem 1rem",
+                borderBottom: "1px solid #f3f4f6",
+                flexShrink: 0,
               }}
             >
               <div
                 style={{
                   display: "flex",
                   justifyContent: "space-between",
-                  alignItems: "flex-start",
-                  gap: "1rem",
+                  alignItems: "center",
                 }}
               >
-                <div style={{ flex: 1 }}>
-                  <p
+                <div>
+                  <div
                     style={{
-                      margin: 0,
-                      fontSize: "0.75rem",
                       fontWeight: "600",
-                      color: "#6b7280",
-                      textTransform: "uppercase",
-                      letterSpacing: "0.5px",
-                    }}
-                  >
-                    Customer
-                  </p>
-                  <p
-                    style={{
-                      margin: "0.5rem 0 0 0",
-                      fontWeight: "700",
-                      color: "#1f2937",
-                      fontSize: "1.125rem",
+                      fontSize: "0.9rem",
+                      color: "#111827",
                     }}
                   >
                     {visit.customer?.name}
-                  </p>
-                  <p
+                  </div>
+                  <div
                     style={{
-                      margin: "0.25rem 0 0 0",
-                      fontSize: "0.875rem",
-                      color: "#6b7280",
+                      fontSize: "0.75rem",
+                      color: "#9ca3af",
+                      marginTop: "1px",
                     }}
                   >
-                    📱 {visit.customer?.contactNo || visit.customer?.phone}
-                  </p>
+                    {visit.customer?.contactNo || visit.customer?.phone}
+                  </div>
                 </div>
-                {/* MEMBERSHIP BADGE */}
-                <div>
-                  {(() => {
-                    const membershipType =
-                      customerData?.membershipType ||
-                      visit.customer?.membershipType ||
-                      "regular";
-                    const isElite = membershipType === "elite";
-                    const isMember = membershipType === "membership";
-
-                    return (
-                      <div
-                        style={{
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: "0.5rem",
-                          padding: isElite
-                            ? "0.625rem 1rem"
-                            : "0.625rem 0.875rem",
-                          background: isElite
-                            ? "linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)"
-                            : isMember
-                              ? "linear-gradient(135deg, #a78bfa 0%, #8b5cf6 100%)"
-                              : "linear-gradient(135deg, #d1d5db 0%, #9ca3af 100%)",
-                          borderRadius: "9999px",
-                          fontSize: "0.75rem",
-                          fontWeight: "700",
-                          color: isElite
-                            ? "#78350f"
-                            : isMember
-                              ? "#4c1d95"
-                              : "#374151",
-                          boxShadow: isElite
-                            ? "0 4px 12px rgba(251, 191, 36, 0.25)"
-                            : isMember
-                              ? "0 4px 12px rgba(139, 92, 246, 0.25)"
-                              : "none",
-                          textTransform: "uppercase",
-                          letterSpacing: "0.5px",
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        {isElite
-                          ? "👑 Elite"
-                          : isMember
-                            ? "⭐ Member"
-                            : "Regular"}
-                      </div>
-                    );
-                  })()}
-                </div>
+                {(() => {
+                  const mt =
+                    customerData?.membershipType ||
+                    visit.customer?.membershipType ||
+                    "regular";
+                  const label =
+                    mt === "elite"
+                      ? "Elite"
+                      : mt === "membership"
+                        ? "Member"
+                        : "Regular";
+                  return (
+                    <span
+                      style={{
+                        padding: "0.2rem 0.6rem",
+                        background: "#f3f4f6",
+                        border: "1px solid #e5e7eb",
+                        borderRadius: "9999px",
+                        fontSize: "0.65rem",
+                        fontWeight: "600",
+                        color: "#6b7280",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.4px",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {label}
+                    </span>
+                  );
+                })()}
               </div>
             </div>
 
-            {/* ITEMS SUMMARY */}
-            <div style={{ marginBottom: "1.5rem" }}>
-              <h3
+            {/* Items list */}
+            <div
+              style={{ flex: 1, overflowY: "auto", padding: "0.75rem 1rem" }}
+            >
+              <p
                 style={{
-                  fontSize: "0.75rem",
+                  margin: "0 0 0.4rem 0",
+                  fontSize: "0.65rem",
                   fontWeight: "700",
-                  color: "#374151",
-                  marginBottom: "0.75rem",
+                  color: "#9ca3af",
                   textTransform: "uppercase",
                   letterSpacing: "0.5px",
                 }}
               >
-                📦 Items Summary
-              </h3>
-              <div
-                style={{
-                  background: "#f9fafb",
-                  padding: "1rem",
-                  borderRadius: "0.75rem",
-                  border: "1px solid #e5e7eb",
-                  fontSize: "0.875rem",
-                }}
-              >
-                {visit.items?.map((item, idx) => (
-                  <div
-                    key={idx}
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      padding: "0.75rem 0",
-                      borderBottom:
-                        idx < visit.items.length - 1
-                          ? "1px solid #f3f4f6"
-                          : "none",
-                    }}
-                  >
-                    <div>
-                      <p
-                        style={{
-                          margin: 0,
-                          fontWeight: "500",
-                          color: "#1f2937",
-                        }}
-                      >
-                        {item.name}
-                      </p>
-                      <p
-                        style={{
-                          margin: "0.25rem 0 0 0",
-                          fontSize: "0.75rem",
-                          color: "#9ca3af",
-                        }}
-                      >
-                        Qty: {item.quantity}
-                      </p>
-                    </div>
-                    <span
-                      style={{
-                        fontWeight: "700",
-                        color: "#667eea",
-                        fontSize: "0.95rem",
-                      }}
-                    >
-                      ₹{(item.price * item.quantity).toFixed(2)}
+                Items
+              </p>
+              {visit.items?.map((item, idx) => (
+                <div
+                  key={idx}
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    padding: "0.3rem 0",
+                    borderBottom: "1px solid #f9fafb",
+                    fontSize: "0.8125rem",
+                  }}
+                >
+                  <span style={{ color: "#374151" }}>
+                    {item.name}{" "}
+                    <span style={{ color: "#9ca3af" }}>
+                      ×{item.quantity || 1}
                     </span>
-                  </div>
-                ))}
-              </div>
+                  </span>
+                  <span style={{ color: "#111827", fontWeight: "600" }}>
+                    ₹{(item.price * (item.quantity || 1)).toFixed(2)}
+                  </span>
+                </div>
+              ))}
             </div>
 
-            {/* PAYMENT SUMMARY */}
+            {/* Totals */}
             <div
               style={{
-                background: "linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)",
-                border: "1px solid #fcd34d",
-                padding: "1.25rem",
-                borderRadius: "0.875rem",
-                marginBottom: "1.5rem",
+                padding: "0.75rem 1rem",
+                borderTop: "1px solid #e5e7eb",
+                background: "#f9fafb",
+                flexShrink: 0,
               }}
             >
               <div
                 style={{
                   display: "flex",
                   justifyContent: "space-between",
-                  marginBottom: "0.75rem",
-                  fontSize: "0.875rem",
+                  fontSize: "0.8rem",
+                  color: "#6b7280",
+                  marginBottom: "0.25rem",
                 }}
               >
-                <span style={{ color: "#78350f" }}>Subtotal:</span>
-                <span style={{ fontWeight: "600", color: "#78350f" }}>
-                  ₹{baseTotals.subtotal.toFixed(2)}
-                </span>
+                <span>Subtotal</span>
+                <span>₹{baseTotals.subtotal.toFixed(2)}</span>
               </div>
               {finalDiscount > 0 && (
                 <div
                   style={{
                     display: "flex",
                     justifyContent: "space-between",
-                    marginBottom: "0.75rem",
-                    fontSize: "0.875rem",
-                    color: "#b45309",
+                    fontSize: "0.8rem",
+                    color: "#dc2626",
+                    marginBottom: "0.25rem",
                   }}
                 >
-                  <span>{discountDescription}:</span>
-                  <span style={{ fontWeight: "600" }}>
-                    -₹{finalDiscount.toFixed(2)}
-                  </span>
+                  <span>{discountDescription}</span>
+                  <span>-₹{finalDiscount.toFixed(2)}</span>
                 </div>
               )}
               {membershipData && discountType === "membership" && (
                 <div
                   style={{
-                    fontSize: "0.75rem",
-                    color: "#b45309",
-                    marginBottom: "0.75rem",
-                    padding: "0.5rem",
-                    background: "rgba(251, 146, 60, 0.1)",
-                    borderRadius: "0.5rem",
+                    fontSize: "0.7rem",
+                    color: "#9ca3af",
+                    marginBottom: "0.25rem",
                   }}
                 >
-                  ✓ {membershipData.name} Member -{" "}
-                  {membershipData.discountPercentage}% member discount applied
+                  {membershipData.name} ? {membershipData.discountPercentage}%
+                  off
                 </div>
               )}
               <div
                 style={{
                   display: "flex",
                   justifyContent: "space-between",
-                  fontSize: "1.25rem",
+                  fontSize: "1rem",
                   fontWeight: "700",
-                  color: "#92400e",
-                  paddingTop: "0.75rem",
-                  borderTop: "2px solid #fbbf24",
+                  color: "#111827",
+                  paddingTop: "0.375rem",
+                  borderTop: "1px solid #e5e7eb",
+                  marginTop: "0.25rem",
                 }}
               >
-                <span>Total:</span>
+                <span>Total</span>
                 <span>₹{totalAmount.toFixed(2)}</span>
               </div>
+              {amountPaid !== "" && balance !== 0 && (
+                <div
+                  style={{
+                    fontSize: "0.75rem",
+                    fontWeight: "600",
+                    color: balance > 0 ? "#dc2626" : "#059669",
+                    marginTop: "0.3rem",
+                  }}
+                >
+                  {balance > 0
+                    ? `Balance: ₹${balance.toFixed(2)}`
+                    : `Overpaid: ₹${Math.abs(balance).toFixed(2)}`}
+                </div>
+              )}
             </div>
           </div>
 
-          {/* RIGHT COLUMN - DISCOUNTS, PAYMENT, NOTES & BUTTONS */}
-          <div>
-            {/* DISCOUNT SECTION */}
-            <div style={{ marginBottom: "1.5rem" }}>
-              <h3
+          {/* RIGHT ? discount + payment + actions */}
+          <div
+            style={{
+              flex: 1,
+              display: "flex",
+              flexDirection: "column",
+              overflow: "hidden",
+            }}
+          >
+            <div
+              style={{ flex: 1, overflowY: "auto", padding: "0.875rem 1rem" }}
+            >
+              {/* Discount */}
+              <p
                 style={{
-                  fontSize: "0.75rem",
+                  margin: "0 0 0.4rem 0",
+                  fontSize: "0.65rem",
                   fontWeight: "700",
-                  color: "#374151",
-                  marginBottom: "0.75rem",
+                  color: "#9ca3af",
                   textTransform: "uppercase",
                   letterSpacing: "0.5px",
                 }}
               >
-                ✂️ Apply Discount (Optional)
-              </h3>
-
+                Discount
+              </p>
               <div
                 style={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr 1fr 1fr",
-                  gap: "0.5rem",
-                  marginBottom: "0.75rem",
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: "0.3rem",
+                  marginBottom: "0.625rem",
                 }}
               >
-                <button
-                  onClick={() => setDiscountType("none")}
-                  style={{
-                    padding: "0.625rem 0.5rem",
-                    background: discountType === "none" ? "#667eea" : "#f3f4f6",
-                    color: discountType === "none" ? "white" : "#4b5563",
-                    border: "none",
-                    borderRadius: "0.5rem",
-                    fontSize: "0.75rem",
-                    fontWeight: "600",
-                    cursor: "pointer",
-                    transition: "all 0.2s",
-                  }}
-                  onMouseEnter={(e) => {
-                    if (discountType !== "none")
-                      e.currentTarget.style.background = "#e5e7eb";
-                  }}
-                  onMouseLeave={(e) => {
-                    if (discountType !== "none")
-                      e.currentTarget.style.background = "#f3f4f6";
-                  }}
-                >
-                  No Discount
-                </button>
-                {membershipData && membershipData.discountPercentage > 0 ? (
+                {[
+                  { id: "none", label: "None" },
+                  ...(membershipData && membershipData.discountPercentage > 0
+                    ? [
+                        {
+                          id: "membership",
+                          label: `${membershipData.discountPercentage}% Member`,
+                        },
+                      ]
+                    : []),
+                  { id: "percentage", label: "%" },
+                  { id: "flat", label: "₹ Flat" },
+                  { id: "coins", label: "Points" },
+                  { id: "coupon", label: "Coupon" },
+                ].map((opt) => (
                   <button
-                    onClick={() => setDiscountType("membership")}
+                    key={opt.id}
+                    onClick={() => setDiscountType(opt.id)}
                     style={{
-                      padding: "0.625rem 0.5rem",
+                      padding: "0.3rem 0.65rem",
                       background:
-                        discountType === "membership" ? "#fb923c" : "#fef3c7",
-                      color:
-                        discountType === "membership" ? "white" : "#b45309",
+                        discountType === opt.id ? "#111827" : "#f3f4f6",
+                      color: discountType === opt.id ? "white" : "#6b7280",
                       border: "none",
-                      borderRadius: "0.5rem",
+                      borderRadius: "0.375rem",
                       fontSize: "0.75rem",
                       fontWeight: "600",
                       cursor: "pointer",
-                      transition: "all 0.2s",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      gap: "0.25rem",
-                    }}
-                    onMouseEnter={(e) => {
-                      if (discountType !== "membership")
-                        e.currentTarget.style.background = "#fed7aa";
-                    }}
-                    onMouseLeave={(e) => {
-                      if (discountType !== "membership")
-                        e.currentTarget.style.background = "#fef3c7";
                     }}
                   >
-                    👑 {membershipData.discountPercentage}%
+                    {opt.label}
                   </button>
-                ) : null}
-                <button
-                  onClick={() => setDiscountType("percentage")}
-                  style={{
-                    padding: "0.625rem 0.5rem",
-                    background:
-                      discountType === "percentage" ? "#667eea" : "#f3f4f6",
-                    color: discountType === "percentage" ? "white" : "#4b5563",
-                    border: "none",
-                    borderRadius: "0.5rem",
-                    fontSize: "0.75rem",
-                    fontWeight: "600",
-                    cursor: "pointer",
-                    transition: "all 0.2s",
-                  }}
-                  onMouseEnter={(e) => {
-                    if (discountType !== "percentage")
-                      e.currentTarget.style.background = "#e5e7eb";
-                  }}
-                  onMouseLeave={(e) => {
-                    if (discountType !== "percentage")
-                      e.currentTarget.style.background = "#f3f4f6";
-                  }}
-                >
-                  % Discount
-                </button>
-                <button
-                  onClick={() => setDiscountType("flat")}
-                  style={{
-                    padding: "0.625rem 0.5rem",
-                    background: discountType === "flat" ? "#667eea" : "#f3f4f6",
-                    color: discountType === "flat" ? "white" : "#4b5563",
-                    border: "none",
-                    borderRadius: "0.5rem",
-                    fontSize: "0.75rem",
-                    fontWeight: "600",
-                    cursor: "pointer",
-                    transition: "all 0.2s",
-                  }}
-                  onMouseEnter={(e) => {
-                    if (discountType !== "flat")
-                      e.currentTarget.style.background = "#e5e7eb";
-                  }}
-                  onMouseLeave={(e) => {
-                    if (discountType !== "flat")
-                      e.currentTarget.style.background = "#f3f4f6";
-                  }}
-                >
-                  Flat Amount
-                </button>
-                <button
-                  onClick={() => setDiscountType("coins")}
-                  style={{
-                    padding: "0.625rem 0.5rem",
-                    background:
-                      discountType === "coins" ? "#8b5cf6" : "#f3e8ff",
-                    color: discountType === "coins" ? "white" : "#6b21a8",
-                    border: "none",
-                    borderRadius: "0.5rem",
-                    fontSize: "0.75rem",
-                    fontWeight: "600",
-                    cursor: "pointer",
-                    transition: "all 0.2s",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: "0.25rem",
-                  }}
-                  onMouseEnter={(e) => {
-                    if (discountType !== "coins")
-                      e.currentTarget.style.background = "#ede9fe";
-                  }}
-                  onMouseLeave={(e) => {
-                    if (discountType !== "coins")
-                      e.currentTarget.style.background = "#f3e8ff";
-                  }}
-                >
-                  <Coins size={13} /> Points
-                </button>
-                <button
-                  onClick={() => setDiscountType("coupon")}
-                  style={{
-                    padding: "0.625rem 0.5rem",
-                    background:
-                      discountType === "coupon" ? "#10b981" : "#d1fae5",
-                    color: discountType === "coupon" ? "white" : "#065f46",
-                    border: "none",
-                    borderRadius: "0.5rem",
-                    fontSize: "0.75rem",
-                    fontWeight: "600",
-                    cursor: "pointer",
-                    transition: "all 0.2s",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: "0.25rem",
-                  }}
-                  onMouseEnter={(e) => {
-                    if (discountType !== "coupon")
-                      e.currentTarget.style.background = "#a7f3d0";
-                  }}
-                  onMouseLeave={(e) => {
-                    if (discountType !== "coupon")
-                      e.currentTarget.style.background = "#d1fae5";
-                  }}
-                >
-                  🎟️ Coupon Code
-                </button>
+                ))}
               </div>
 
-              {discountType === "percentage" || discountType === "flat" ? (
+              {(discountType === "percentage" || discountType === "flat") && (
                 <input
                   type="number"
                   value={discountValue}
                   onChange={(e) => setDiscountValue(e.target.value)}
                   onWheel={(e) => e.preventDefault()}
                   placeholder={
-                    discountType === "percentage"
-                      ? "Enter discount %"
-                      : "Enter discount amount"
+                    discountType === "percentage" ? "Enter %" : "Enter amount"
                   }
                   style={{
                     width: "100%",
-                    padding: "0.75rem",
-                    border: "1px solid #e5e7eb",
-                    borderRadius: "0.5rem",
-                    fontSize: "0.875rem",
-                    fontWeight: "500",
+                    padding: "0.5rem 0.625rem",
+                    border: "1px solid #d1d5db",
+                    borderRadius: "0.375rem",
+                    fontSize: "0.8125rem",
+                    fontFamily: "inherit",
+                    boxSizing: "border-box",
+                    marginBottom: "0.625rem",
                   }}
                 />
-              ) : discountType === "coins" ? (
-                <div>
+              )}
+              {discountType === "coins" && (
+                <div style={{ marginBottom: "0.625rem" }}>
                   <input
                     type="number"
                     value={coinsUsed}
                     onChange={(e) => setCoinsUsed(e.target.value)}
                     onWheel={(e) => e.preventDefault()}
-                    placeholder="Enter loyalty points to use"
+                    placeholder="Points to redeem"
                     max={availableLoyaltyPoints}
                     style={{
                       width: "100%",
-                      padding: "0.75rem",
-                      border: "1px solid #e5e7eb",
-                      borderRadius: "0.5rem",
-                      fontSize: "0.875rem",
-                      fontWeight: "500",
+                      padding: "0.5rem 0.625rem",
+                      border: "1px solid #d1d5db",
+                      borderRadius: "0.375rem",
+                      fontSize: "0.8125rem",
+                      fontFamily: "inherit",
+                      boxSizing: "border-box",
                     }}
                   />
                   <div
                     style={{
-                      fontSize: "0.75rem",
-                      color: "#6b7280",
-                      marginTop: "0.5rem",
-                      textAlign: "center",
+                      fontSize: "0.7rem",
+                      color: "#9ca3af",
+                      marginTop: "0.25rem",
                     }}
                   >
                     Available:{" "}
-                    <span style={{ fontWeight: "600", color: "#1f2937" }}>
-                      {availableLoyaltyPoints}
-                    </span>{" "}
-                    Points → Discount:{" "}
-                    <span style={{ fontWeight: "600", color: "#667eea" }}>
-                      ₹{(parseFloat(coinsUsed) || 0) / 20}
-                    </span>
+                    <b style={{ color: "#111827" }}>{availableLoyaltyPoints}</b>{" "}
+                    pts ? ₹{(parseFloat(coinsUsed) || 0) / 20} discount
                   </div>
                 </div>
-              ) : discountType === "coupon" ? (
-                <div style={{ display: "flex", gap: "0.5rem" }}>
-                  <input
-                    type="text"
-                    value={couponCode}
-                    onChange={(e) =>
-                      setCouponCode(e.target.value.toUpperCase())
-                    }
-                    placeholder="Enter coupon code"
-                    disabled={validatingCoupon}
-                    style={{
-                      flex: 1,
-                      padding: "0.75rem",
-                      border: couponError
-                        ? "2px solid #ef4444"
-                        : "1px solid #e5e7eb",
-                      borderRadius: "0.5rem",
-                      fontSize: "0.875rem",
-                      fontWeight: "500",
-                      backgroundColor: validatingCoupon ? "#f3f4f6" : "white",
-                      cursor: validatingCoupon ? "not-allowed" : "pointer",
-                    }}
-                  />
-                  <button
-                    onClick={handleValidateCoupon}
-                    disabled={validatingCoupon || !couponCode}
-                    style={{
-                      padding: "0.75rem 1rem",
-                      background: couponData ? "#10b981" : "#667eea",
-                      color: "white",
-                      border: "none",
-                      borderRadius: "0.5rem",
-                      fontSize: "0.75rem",
-                      fontWeight: "600",
-                      cursor:
-                        validatingCoupon || !couponCode
-                          ? "not-allowed"
-                          : "pointer",
-                      opacity: validatingCoupon || !couponCode ? 0.6 : 1,
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    {validatingCoupon
-                      ? "Validating..."
-                      : couponData
-                        ? "✓ Applied"
-                        : "Validate"}
-                  </button>
-                </div>
-              ) : null}
-              {discountType === "coupon" && couponError && (
-                <div
-                  style={{
-                    marginTop: "0.5rem",
-                    padding: "0.75rem",
-                    background: "#fee2e2",
-                    border: "1px solid #fecaca",
-                    borderRadius: "0.5rem",
-                    fontSize: "0.75rem",
-                    color: "#991b1b",
-                    fontWeight: "500",
-                  }}
-                >
-                  ❌ {couponError}
-                </div>
               )}
-              {discountType === "coupon" && couponData && (
-                <div
-                  style={{
-                    marginTop: "0.5rem",
-                    padding: "0.75rem",
-                    background: "#dcfce7",
-                    border: "1px solid #bbf7d0",
-                    borderRadius: "0.5rem",
-                    fontSize: "0.75rem",
-                    color: "#166534",
-                    fontWeight: "500",
-                  }}
-                >
-                  ✓ Coupon applied:{" "}
-                  {couponData.discountType === "percentage"
-                    ? couponData.discountValue + "%"
-                    : "₹" + couponData.discountValue}{" "}
-                  discount
-                  {couponData.isCapped && (
-                    <div
+              {discountType === "coupon" && (
+                <div style={{ marginBottom: "0.625rem" }}>
+                  <div style={{ display: "flex", gap: "0.375rem" }}>
+                    <input
+                      type="text"
+                      value={couponCode}
+                      onChange={(e) =>
+                        setCouponCode(e.target.value.toUpperCase())
+                      }
+                      placeholder="Coupon code"
+                      disabled={validatingCoupon}
                       style={{
-                        marginTop: "0.5rem",
-                        fontSize: "0.7rem",
-                        color: "#047857",
+                        flex: 1,
+                        padding: "0.5rem 0.625rem",
+                        border: `1px solid ${couponError ? "#ef4444" : "#d1d5db"}`,
+                        borderRadius: "0.375rem",
+                        fontSize: "0.8125rem",
+                        fontFamily: "inherit",
+                      }}
+                    />
+                    <button
+                      onClick={handleValidateCoupon}
+                      disabled={validatingCoupon || !couponCode}
+                      style={{
+                        padding: "0.5rem 0.75rem",
+                        background: couponData ? "#111827" : "#f3f4f6",
+                        color: couponData ? "white" : "#6b7280",
+                        border: "none",
+                        borderRadius: "0.375rem",
+                        fontSize: "0.75rem",
                         fontWeight: "600",
+                        cursor:
+                          validatingCoupon || !couponCode
+                            ? "not-allowed"
+                            : "pointer",
+                        whiteSpace: "nowrap",
+                        opacity: validatingCoupon || !couponCode ? 0.5 : 1,
                       }}
                     >
-                      💡 Maximum discount of ₹
-                      {couponData.discountAmount.toFixed(2)} applied
-                      {couponData.originalDiscountAmount >
-                        couponData.discountAmount}
+                      {validatingCoupon
+                        ? "?"
+                        : couponData
+                          ? "? Applied"
+                          : "Apply"}
+                    </button>
+                  </div>
+                  {couponError && (
+                    <div
+                      style={{
+                        marginTop: "0.25rem",
+                        fontSize: "0.72rem",
+                        color: "#dc2626",
+                      }}
+                    >
+                      {couponError}
+                    </div>
+                  )}
+                  {couponData && (
+                    <div
+                      style={{
+                        marginTop: "0.25rem",
+                        fontSize: "0.72rem",
+                        color: "#16a34a",
+                      }}
+                    >
+                      {couponData.discountType === "percentage"
+                        ? couponData.discountValue + "%"
+                        : "₹" + couponData.discountValue}{" "}
+                      off
+                      {couponData.isCapped &&
+                        ` (capped at ₹${couponData.discountAmount.toFixed(2)})`}
                     </div>
                   )}
                 </div>
               )}
-            </div>
-            {/* AMOUNT PAID */}
-            <div style={{ marginBottom: "1.5rem" }}>
-              <label
+
+              {/* Amount Paid */}
+              <p
                 style={{
-                  display: "block",
-                  fontSize: "0.75rem",
+                  margin: "0.75rem 0 0.4rem 0",
+                  fontSize: "0.65rem",
                   fontWeight: "700",
-                  color: "#374151",
-                  marginBottom: "0.5rem",
+                  color: "#9ca3af",
                   textTransform: "uppercase",
                   letterSpacing: "0.5px",
                 }}
               >
-                💵 Amount Paid
-              </label>
+                Amount Paid
+              </p>
               <div
                 style={{
                   position: "relative",
                   display: "flex",
                   alignItems: "center",
+                  marginBottom: "0.625rem",
                 }}
               >
                 <span
                   style={{
                     position: "absolute",
-                    left: "0.75rem",
-                    fontSize: "1rem",
-                    color: "#6b7280",
+                    left: "0.625rem",
+                    color: "#9ca3af",
+                    fontSize: "0.875rem",
                   }}
                 >
                   ₹
@@ -1682,227 +1499,187 @@ const CheckoutModal = ({
                   placeholder="0.00"
                   style={{
                     width: "100%",
-                    padding: "0.875rem 2.75rem 0.875rem 2rem",
-                    border: "2px solid #e5e7eb",
-                    borderRadius: "0.5rem",
-                    fontSize: "1.125rem",
-                    fontWeight: "700",
-                    color: "#1f2937",
-                    transition: "border-color 0.2s",
+                    padding: "0.6rem 5rem 0.6rem 1.75rem",
+                    border: "1px solid #d1d5db",
+                    borderRadius: "0.375rem",
+                    fontSize: "1rem",
+                    fontWeight: "600",
+                    color: "#111827",
+                    fontFamily: "inherit",
+                    boxSizing: "border-box",
                   }}
                   onFocus={(e) =>
-                    (e.currentTarget.style.borderColor = "#667eea")
+                    (e.currentTarget.style.borderColor = "#9ca3af")
                   }
                   onBlur={(e) =>
-                    (e.currentTarget.style.borderColor = "#e5e7eb")
+                    (e.currentTarget.style.borderColor = "#d1d5db")
                   }
                 />
                 <button
                   onClick={() => setAmountPaid(totalAmount.toString())}
                   style={{
                     position: "absolute",
-                    right: "0.5rem",
-                    background:
-                      "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                    right: "0.375rem",
+                    padding: "0.3rem 0.6rem",
+                    background: "#111827",
                     color: "white",
                     border: "none",
-                    borderRadius: "0.375rem",
-                    padding: "0.5rem 0.875rem",
-                    fontSize: "0.7rem",
+                    borderRadius: "0.25rem",
+                    fontSize: "0.65rem",
                     fontWeight: "700",
                     cursor: "pointer",
-                    transition: "all 0.2s ease",
                     textTransform: "uppercase",
-                    letterSpacing: "0.5px",
+                    letterSpacing: "0.4px",
                   }}
-                  onMouseEnter={(e) =>
-                    (e.currentTarget.style.boxShadow =
-                      "0 4px 12px rgba(102, 126, 234, 0.4)")
-                  }
-                  onMouseLeave={(e) =>
-                    (e.currentTarget.style.boxShadow =
-                      "0 1px 3px rgba(102, 126, 234, 0.2)")
-                  }
-                  title={`Set to ₹${totalAmount.toFixed(2)}`}
                 >
-                  Fill Total
+                  Fill
                 </button>
               </div>
-              {amountPaid !== "" && balance !== 0 && (
-                <p
-                  style={{
-                    margin: "0.5rem 0 0 0",
-                    fontSize: "0.875rem",
-                    fontWeight: "600",
-                    color: balance > 0 ? "#dc2626" : "#10b981",
-                  }}
-                >
-                  {balance > 0
-                    ? `⏳ Balance Due: ₹${balance.toFixed(2)}`
-                    : `✓ Overpaid: ₹${Math.abs(balance).toFixed(2)}`}
-                </p>
-              )}
-            </div>
 
-            {/* PAYMENT METHOD */}
-            <div style={{ marginBottom: "1.5rem" }}>
-              <label
+              {/* Payment Method */}
+              <p
                 style={{
-                  display: "block",
-                  fontSize: "0.75rem",
+                  margin: "0 0 0.4rem 0",
+                  fontSize: "0.65rem",
                   fontWeight: "700",
-                  color: "#374151",
-                  marginBottom: "0.5rem",
+                  color: "#9ca3af",
                   textTransform: "uppercase",
                   letterSpacing: "0.5px",
                 }}
               >
-                💳 Payment Method
-              </label>
+                Payment Method
+              </p>
               <div
                 style={{
                   display: "grid",
                   gridTemplateColumns: "1fr 1fr",
-                  gap: "0.5rem",
+                  gap: "0.3rem",
+                  marginBottom: "0.75rem",
                 }}
               >
                 {paymentMethods.map((method) => {
                   const Icon = method.icon;
+                  const active = paymentMethod === method.id;
                   return (
                     <button
                       key={method.id}
                       onClick={() => setPaymentMethod(method.id)}
                       style={{
-                        padding: "0.75rem",
-                        background:
-                          paymentMethod === method.id
-                            ? method.color
-                            : "#f3f4f6",
-                        color:
-                          paymentMethod === method.id ? "white" : "#4b5563",
-                        border:
-                          paymentMethod === method.id
-                            ? `2px solid ${method.color}`
-                            : "2px solid transparent",
-                        borderRadius: "0.5rem",
+                        padding: "0.5rem",
+                        background: active ? method.color : "#f3f4f6",
+                        color: active ? "white" : "#6b7280",
+                        border: active
+                          ? `2px solid ${method.color}`
+                          : "2px solid transparent",
+                        borderRadius: "0.375rem",
                         fontWeight: "600",
                         cursor: "pointer",
-                        transition: "all 0.2s",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
-                        gap: "0.5rem",
-                        fontSize: "0.875rem",
+                        gap: "0.375rem",
+                        fontSize: "0.8125rem",
                       }}
                       onMouseEnter={(e) => {
-                        if (paymentMethod !== method.id) {
+                        if (!active)
                           e.currentTarget.style.background = "#e5e7eb";
-                        }
                       }}
                       onMouseLeave={(e) => {
-                        if (paymentMethod !== method.id) {
+                        if (!active)
                           e.currentTarget.style.background = "#f3f4f6";
-                        }
                       }}
                     >
-                      <Icon size={16} />
+                      <Icon size={14} />
                       {method.label}
                     </button>
                   );
                 })}
               </div>
-            </div>
 
-            {/* NOTES */}
-            <div style={{ marginBottom: "1.5rem" }}>
-              <label
+              {/* Notes */}
+              <p
                 style={{
-                  display: "block",
-                  fontSize: "0.75rem",
+                  margin: "0 0 0.4rem 0",
+                  fontSize: "0.65rem",
                   fontWeight: "700",
-                  color: "#374151",
-                  marginBottom: "0.5rem",
+                  color: "#9ca3af",
                   textTransform: "uppercase",
                   letterSpacing: "0.5px",
                 }}
               >
-                📝 Notes (Optional)
-              </label>
+                Notes
+              </p>
               <textarea
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                placeholder="Add any additional notes or remarks..."
+                placeholder="Optional notes…"
                 style={{
                   width: "100%",
-                  padding: "0.75rem",
+                  padding: "0.5rem 0.625rem",
                   border: "1px solid #e5e7eb",
-                  borderRadius: "0.5rem",
-                  fontSize: "0.875rem",
-                  minHeight: "70px",
+                  borderRadius: "0.375rem",
+                  fontSize: "0.8rem",
+                  minHeight: "54px",
                   fontFamily: "inherit",
                   resize: "none",
-                  transition: "border-color 0.2s",
+                  boxSizing: "border-box",
                 }}
-                onFocus={(e) => (e.currentTarget.style.borderColor = "#667eea")}
+                onFocus={(e) => (e.currentTarget.style.borderColor = "#9ca3af")}
                 onBlur={(e) => (e.currentTarget.style.borderColor = "#e5e7eb")}
               />
             </div>
 
-            {/* ACTION BUTTONS */}
+            {/* Footer actions */}
             <div
               style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1.5fr",
-                gap: "1rem",
+                padding: "0.75rem 1rem",
+                borderTop: "1px solid #e5e7eb",
+                display: "flex",
+                gap: "0.5rem",
+                flexShrink: 0,
               }}
             >
               <button
                 onClick={onClose}
                 style={{
-                  padding: "0.875rem 1.5rem",
-                  background: "#f3f4f6",
+                  flex: 1,
+                  padding: "0.6rem",
+                  background: "white",
+                  border: "1px solid #d1d5db",
                   color: "#374151",
-                  border: "1px solid #e5e7eb",
                   borderRadius: "0.5rem",
                   fontWeight: "600",
+                  fontSize: "0.8125rem",
                   cursor: "pointer",
-                  fontSize: "0.95rem",
-                  transition: "all 0.2s",
                 }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = "#e5e7eb";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = "#f3f4f6";
-                }}
+                onMouseEnter={(e) =>
+                  (e.currentTarget.style.background = "#f9fafb")
+                }
+                onMouseLeave={(e) =>
+                  (e.currentTarget.style.background = "white")
+                }
               >
                 Cancel
               </button>
               <button
                 onClick={handleCompletePayment}
                 style={{
-                  padding: "0.875rem 1.5rem",
-                  background:
-                    "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+                  flex: 2,
+                  padding: "0.6rem",
+                  background: "#111827",
                   color: "white",
                   border: "none",
                   borderRadius: "0.5rem",
                   fontWeight: "600",
+                  fontSize: "0.8125rem",
                   cursor: "pointer",
-                  fontSize: "0.95rem",
-                  transition: "all 0.2s",
-                  boxShadow: "0 2px 8px rgba(16, 185, 129, 0.3)",
                 }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.boxShadow =
-                    "0 4px 12px rgba(16, 185, 129, 0.4)";
-                  e.currentTarget.style.transform = "translateY(-1px)";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.boxShadow =
-                    "0 2px 8px rgba(16, 185, 129, 0.3)";
-                  e.currentTarget.style.transform = "translateY(0)";
-                }}
+                onMouseEnter={(e) =>
+                  (e.currentTarget.style.background = "#1f2937")
+                }
+                onMouseLeave={(e) =>
+                  (e.currentTarget.style.background = "#111827")
+                }
               >
                 ✓ Complete Payment
               </button>

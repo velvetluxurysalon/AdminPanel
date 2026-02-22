@@ -277,6 +277,10 @@ export const addCustomer = async (customerData) => {
     const existingDoc = await getDoc(doc(db, "customers", phone));
     if (existingDoc.exists()) {
       // Return existing customer data
+      console.log(
+        "✅ [AddCustomer] Customer already exists with phone:",
+        phone,
+      );
       return {
         id: phone,
         ...existingDoc.data(),
@@ -284,11 +288,13 @@ export const addCustomer = async (customerData) => {
     }
 
     // Create customer with phone as document ID
+    const now = new Date();
     const customerDoc = {
       name: customerData.name || "",
       phone: phone,
+      contactNo: phone, // Also store as contactNo for compatibility
       email: customerData.email || "",
-      dateOfBirth: customerData.dateOfBirth || null, // New field for DOB
+      dateOfBirth: customerData.dateOfBirth || null,
       gender: customerData.gender || "",
       isVerified: false,
       loyaltyPoints: 0,
@@ -300,7 +306,13 @@ export const addCustomer = async (customerData) => {
       updatedAt: serverTimestamp(),
     };
 
+    console.log(
+      "📝 [AddCustomer] Creating new customer with phone:",
+      phone,
+      customerDoc,
+    );
     await setDoc(doc(db, "customers", phone), customerDoc);
+    console.log("✅ [AddCustomer] Customer created successfully in Firestore");
 
     // Create loyalty points collection for this customer
     await addDoc(collection(db, `customers/${phone}/pointsHistory`), {
@@ -313,12 +325,15 @@ export const addCustomer = async (customerData) => {
       transactionDate: serverTimestamp(),
     });
 
+    // Return the customer data with a client-side timestamp
     return {
       id: phone,
       ...customerDoc,
+      createdAt: now,
+      updatedAt: now,
     };
   } catch (error) {
-    console.error("Error adding customer:", error);
+    console.error("❌ [AddCustomer] Error adding customer:", error);
     throw error;
   }
 };
