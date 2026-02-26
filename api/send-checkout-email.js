@@ -341,7 +341,9 @@ export default async function handler(req, res) {
   }
 
   try {
+    console.log("\n========================================");
     console.log("📧 [Email API] Received checkout email request");
+    console.log("========================================\n");
 
     // Extract data from request
     const {
@@ -359,21 +361,38 @@ export default async function handler(req, res) {
       notes,
     } = req.body;
 
+    console.log("📥 [Bill Data] Received:");
+    console.log("  - Customer Name:", customerName);
+    console.log("  - Customer Email:", customerEmail);
+    console.log("  - Customer Phone:", customerPhone);
+    console.log("  - Total Amount:", totalAmount);
+    console.log("  - Paid Amount:", paidAmount);
+    console.log("  - Payment Method:", paymentMethod);
+    console.log("  - Items Count:", items?.length || 0);
+    console.log("  - Checkout Date:", checkoutDate);
+
     // Validate required fields
     if (!customerName || !totalAmount) {
       console.error("❌ [Email API] Missing required fields");
+      console.error("   - CustomerName present:", !!customerName);
+      console.error("   - TotalAmount present:", !!totalAmount);
       return res.status(400).json({
         error: "Customer name and total amount are required",
       });
     }
 
+    console.log("✅ [Validation] All required fields present\n");
+
     // Check for email credentials
     if (!EMAIL_PASSWORD) {
-      console.warn(
-        "⚠️ [Email API] Missing EMAIL_PASSWORD - emails will not be sent",
+      console.error(
+        "❌ [Email API] Missing EMAIL_PASSWORD - emails will NOT be sent!",
       );
       console.warn(
-        "Set EMAIL_PASSWORD environment variable for email functionality",
+        "⚠️ [Email API] Set EMAIL_PASSWORD environment variable for email functionality",
+      );
+      console.warn(
+        "⚠️ [Email API] Owner email forwarding FAILED - No credentials",
       );
       return res.status(500).json({
         error:
@@ -382,13 +401,16 @@ export default async function handler(req, res) {
       });
     }
 
-    console.log("📧 [Email API] Email credentials found");
-    console.log("📧 [Email API] Sending to admin:", ADMIN_EMAIL);
+    console.log("✅ [Credentials Check] Email credentials found");
+    console.log("🎯 [Owner Email] Target: " + ADMIN_EMAIL + "\n");
 
     // Create transporter
+    console.log("🔧 [Transporter] Creating email transporter...");
     const transporter = createTransporter();
+    console.log("✅ [Transporter] Transporter created successfully\n");
 
     // Prepare email content
+    console.log("📝 [Email Content] Generating HTML email template...");
     const htmlContent = generateCheckoutEmailHTML({
       customerName,
       customerPhone,
@@ -402,6 +424,7 @@ export default async function handler(req, res) {
       checkoutDate,
       notes,
     });
+    console.log("✅ [Email Content] Email template generated\n");
 
     // Email to admin
     const adminMailOptions = {
@@ -412,15 +435,39 @@ export default async function handler(req, res) {
       text: `Checkout from ${customerName} for ₹${parseFloat(totalAmount).toFixed(2)}. Payment Method: ${paymentMethod || "N/A"}`,
     };
 
-    // Send email to admin
-    console.log("📬 [Email API] Sending email to admin...");
-    const adminResponse = await transporter.sendMail(adminMailOptions);
-    console.log("✅ [Email API] Email sent to admin:", adminResponse.messageId);
+    console.log("📤 [OWNER EMAIL] Starting bill forwarding to owner...");
+    console.log("   - From:", EMAIL_USER);
+    console.log("   - To:", ADMIN_EMAIL);
+    console.log("   - Subject:", adminMailOptions.subject);
+    console.log("   - Bill Amount: ₹" + parseFloat(totalAmount).toFixed(2));
+    console.log("   - Customer: " + customerName);
+
+    // Send email to admin (OWNER)
+    try {
+      const adminResponse = await transporter.sendMail(adminMailOptions);
+      console.log("\n✅ [OWNER EMAIL SUCCESS] Bill forwarded to owner!");
+      console.log("   - Message ID:", adminResponse.messageId);
+      console.log("   - Owner Email:", ADMIN_EMAIL);
+      console.log("   - Bill Amount: ₹" + parseFloat(totalAmount).toFixed(2));
+      console.log("   - Status: SENT\n");
+    } catch (ownerEmailError) {
+      console.error(
+        "\n❌ [OWNER EMAIL FAILED] Could not forward bill to owner!",
+      );
+      console.error("   - Owner Email:", ADMIN_EMAIL);
+      console.error("   - Error:", ownerEmailError.message);
+      console.error("   - Bill Amount: ₹" + parseFloat(totalAmount).toFixed(2));
+      console.error("   - Status: FAILED\n");
+      throw ownerEmailError;
+    }
 
     // Optionally send to customer if email provided
     if (customerEmail) {
       try {
-        console.log("📬 [Email API] Sending copy to customer:", customerEmail);
+        console.log(
+          "📬 [Customer Copy] Attempting to send receipt to customer:",
+          customerEmail,
+        );
         const customerMailOptions = {
           from: EMAIL_USER,
           to: customerEmail,
@@ -432,30 +479,41 @@ export default async function handler(req, res) {
         const customerResponse =
           await transporter.sendMail(customerMailOptions);
         console.log(
-          "✅ [Email API] Email sent to customer:",
+          "✅ [Customer Copy] Receipt sent to customer:",
           customerResponse.messageId,
         );
       } catch (customerError) {
         console.warn(
-          "⚠️ [Email API] Failed to send to customer:",
+          "⚠️ [Customer Copy] Failed to send receipt to customer:",
           customerError.message,
         );
         // Don't fail the entire request if customer email fails
       }
     }
 
+    console.log("\n========================================");
+    console.log("✅ [BILL FORWARDING COMPLETE] Owner notified successfully!");
+    console.log("========================================\n");
+
+    console.log("📊 [Response] Sending success response...");
     return res.status(200).json({
       success: true,
       message: `Checkout confirmation email sent successfully to ${ADMIN_EMAIL}`,
       billAmount: parseFloat(totalAmount).toFixed(2),
       customerName: customerName,
+      ownerNotified: true,
+      ownerEmail: ADMIN_EMAIL,
     });
   } catch (error) {
-    console.error("❌ [Email API] Error:", error);
-    console.error("Error details:", {
-      message: error.message,
-      code: error.code,
-    });
+    console.error("\n========================================");
+    console.error("❌ [BILL FORWARDING FAILED] Owner notification failed!");
+    console.error("========================================");
+    console.error("Error Type:", error.name);
+    console.error("Error Message:", error.message);
+    console.error("Error Code:", error.code);
+    console.error("Attempted to send to:", ADMIN_EMAIL);
+    console.error("Full Error:", error);
+    console.error("==========================================", "\n");
 
     // Common Nodemailer errors
     let errorMessage = error.message || "Failed to send email";
@@ -463,13 +521,30 @@ export default async function handler(req, res) {
     if (error.message.includes("Invalid login")) {
       errorMessage =
         "Email authentication failed. Check EMAIL_USER and EMAIL_PASSWORD.";
+      console.error(
+        "💡 Debug Tip: Verify EMAIL_USER and EMAIL_PASSWORD environment variables",
+      );
     } else if (error.message.includes("ECONNREFUSED")) {
       errorMessage =
         "Cannot connect to SMTP server. Check SMTP_HOST and SMTP_PORT.";
+      console.error(
+        "💡 Debug Tip: Verify SMTP_HOST (" +
+          SMTP_HOST +
+          ") and SMTP_PORT (" +
+          SMTP_PORT +
+          ") settings",
+      );
+    } else if (error.message.includes("Permission denied")) {
+      console.error(
+        "💡 Debug Tip: Email address may not have permission to send",
+      );
     }
 
     return res.status(500).json({
       error: errorMessage,
+      ownerNotified: false,
+      ownerEmail: ADMIN_EMAIL,
+      billForwardingStatus: "FAILED",
       details:
         process.env.NODE_ENV === "development" ? error.message : undefined,
     });
