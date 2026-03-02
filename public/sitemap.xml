@@ -1,0 +1,304 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"
+        xmlns:video="http://www.google.com/schemas/sitemap-video/1.1"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml"
+        xmlns:mobile="http://www.google.com/schemas/sitemap-mobile/1.0">
+  
+  <!-- ============================================ -->
+  <!-- HOMEPAGE - Highest Priority -->
+  <!-- ============================================ -->
+  <url>
+    <loc>https://velvetluxurysalon.in/</loc>
+    <lastmod>2025-12-29</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+    <image:image>
+      <image:loc>https://velvetluxurysalon.in/og-image.png</image:loc>
+      <image:title>Velvet Luxury Salon - Premium Hair and Beauty Services</image:title>
+      <image:caption>Experience luxury hair and beauty services at Velvet Luxury Salon Bhavani, Erode</image:caption>
+    </image:image>
+    <image:image>
+      <image:loc>https://velvetluxurysalon.in/logo.png</image:loc>
+      <image:title>Velvet Luxury Salon Logo</image:title>
+    </image:image>
+    <xhtml:link rel="alternate" hreflang="en-IN" href="https://velvetluxurysalon.in/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://velvetluxurysalon.in/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://velvetluxurysalon.in/"/>
+  </url>
+
+  <!-- ============================================ -->
+  <!-- SERVICES PAGES - High Priority -->
+  <!-- ============================================ -->
+  <url>
+    <loc>https://velvetluxurysalon.in/services</loc>
+    <lastmod>2025-12-29</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.95</priority>
+    <image:image>
+      <image:loc>https://velvetluxurysalon.in/services-banner.jpg</image:loc>
+      <image:title>Professional Salon Services at Velvet Luxury Salon</image:title>
+      <image:caption>Hair cutting, coloring, styling, beauty treatments, spa services and more</image:caption>
+    </image:image>
+  </url>
+
+  <!-- Individual Service Pages -->
+  <url>
+    <loc>https://velvetluxurysalon.in/services/hair-cutting</loc>
+    <lastmod>2025-12-29</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.85</priority>
+    <image:image>
+      <image:loc>https://velvetluxurysalon.in/services/hair-cutting.jpg</image:loc>
+      <image:title>Professional Hair Cutting Services</image:title>
+      <image:caption>Expert haircuts for men and women at Velvet Luxury Salon</image:caption>
+    </image:image>
+  </url>
+
+  <url>
+    <loc>https://velvetluxurysalon.in/services/hair-coloring</loc>
+    <lastmod>2025-12-29</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.85</priority>
+    <image:image>
+      <image:loc>https://velvetluxurysalon.in/services/hair-coloring.jpg</image:loc>
+      <image:title>Hair Coloring and Highlights</image:title>
+      <image:caption>Professional hair coloring, highlights, balayage and ombre services</image:caption>
+    </image:image>
+  </url>
+
+  <url>
+    <loc>https://velvetluxurysalon.in/services/hair-styling</loc>
+    <lastmod>2025-12-29</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.85</priority>
+    <image:image>
+      <image:loc>https://velvetluxurysalon.in/services/hair-styling.jpg</image:loc>
+      <image:title>Hair Styling Services</image:title>
+      <image:caption>Blowouts, updos, and special occasion styling</image:caption>
+    </image:image>
+  </url>
+
+  <url>
+    <loc>https://velvetluxurysalon.in/services/hair-treatment</loc>
+    <lastmod>2025-12-29</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.85</priority>
+    <image:image>
+      <image:loc>https://velvetluxurysalon.in/services/hair-treatment.jpg</image:loc>
+      <image:title>Hair Treatment Services</image:title>
+      <image:caption>Keratin treatment, hair spa, deep conditioning at Velvet Luxury Salon</image:caption>
+    </image:image>
+  </url>
+
+  <url>
+    <loc>https://velvetluxurysalon.in/services/bridal-makeup</loc>
+    <lastmod>2025-12-29</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.90</priority>
+    <image:image>
+      <image:loc>https://velvetluxurysalon.in/services/bridal-makeup.jpg</image:loc>
+      <image:title>Bridal Makeup Services</image:title>
+      <image:caption>Professional bridal makeup and pre-bridal packages</image:caption>
+    </image:image>
+  </url>
+
+  <url>
+    <loc>https://velvetluxurysalon.in/services/facial</loc>
+    <lastmod>2025-12-29</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.80</priority>
+    <image:image>
+      <image:loc>https://velvetluxurysalon.in/services/facial.jpg</image:loc>
+      <image:title>Facial Treatment Services</image:title>
+      <image:caption>Rejuvenating facial treatments and skin care services</image:caption>
+    </image:image>
+  </url>
+
+  <url>
+    <loc>https://velvetluxurysalon.in/services/manicure-pedicure</loc>
+    <lastmod>2025-12-29</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.80</priority>
+    <image:image>
+      <image:loc>https://velvetluxurysalon.in/services/manicure-pedicure.jpg</image:loc>
+      <image:title>Manicure and Pedicure Services</image:title>
+      <image:caption>Nail care, manicure, pedicure and nail art services</image:caption>
+    </image:image>
+  </url>
+
+  <url>
+    <loc>https://velvetluxurysalon.in/services/spa</loc>
+    <lastmod>2025-12-29</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.85</priority>
+    <image:image>
+      <image:loc>https://velvetluxurysalon.in/services/spa.jpg</image:loc>
+      <image:title>Spa and Relaxation Services</image:title>
+      <image:caption>Relaxing spa treatments and massage services</image:caption>
+    </image:image>
+  </url>
+
+  <!-- ============================================ -->
+  <!-- BOOKING PAGE - High Priority (Conversion) -->
+  <!-- ============================================ -->
+  <url>
+    <loc>https://velvetluxurysalon.in/booking</loc>
+    <lastmod>2025-12-29</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.95</priority>
+    <image:image>
+      <image:loc>https://velvetluxurysalon.in/booking-banner.jpg</image:loc>
+      <image:title>Book Your Salon Appointment Online</image:title>
+      <image:caption>Easy online booking at Velvet Luxury Salon</image:caption>
+    </image:image>
+  </url>
+
+  <!-- ============================================ -->
+  <!-- GALLERY PAGE -->
+  <!-- ============================================ -->
+  <url>
+    <loc>https://velvetluxurysalon.in/gallery</loc>
+    <lastmod>2025-12-29</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.85</priority>
+    <image:image>
+      <image:loc>https://velvetluxurysalon.in/gallery/transformation-1.jpg</image:loc>
+      <image:title>Hair Transformation Gallery</image:title>
+      <image:caption>Before and after hair transformations</image:caption>
+    </image:image>
+    <image:image>
+      <image:loc>https://velvetluxurysalon.in/gallery/salon-interior.jpg</image:loc>
+      <image:title>Velvet Luxury Salon Interior</image:title>
+      <image:caption>Our elegant and modern salon ambiance</image:caption>
+    </image:image>
+  </url>
+
+  <!-- ============================================ -->
+  <!-- ABOUT PAGE -->
+  <!-- ============================================ -->
+  <url>
+    <loc>https://velvetluxurysalon.in/about</loc>
+    <lastmod>2025-12-29</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.80</priority>
+    <image:image>
+      <image:loc>https://velvetluxurysalon.in/about-banner.jpg</image:loc>
+      <image:title>About Velvet Luxury Salon</image:title>
+      <image:caption>Our story, mission and values</image:caption>
+    </image:image>
+  </url>
+
+  <!-- ============================================ -->
+  <!-- TEAM PAGE -->
+  <!-- ============================================ -->
+  <url>
+    <loc>https://velvetluxurysalon.in/team</loc>
+    <lastmod>2025-12-29</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.80</priority>
+    <image:image>
+      <image:loc>https://velvetluxurysalon.in/team/team-photo.jpg</image:loc>
+      <image:title>Our Expert Stylists Team</image:title>
+      <image:caption>Meet our professional hair stylists and beauty experts</image:caption>
+    </image:image>
+  </url>
+
+  <!-- ============================================ -->
+  <!-- BLOG PAGES -->
+  <!-- ============================================ -->
+  <url>
+    <loc>https://velvetluxurysalon.in/blog</loc>
+    <lastmod>2025-12-29</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.85</priority>
+    <image:image>
+      <image:loc>https://velvetluxurysalon.in/blog/blog-banner.jpg</image:loc>
+      <image:title>Velvet Luxury Salon Blog</image:title>
+      <image:caption>Hair and beauty tips, trends, and guides</image:caption>
+    </image:image>
+  </url>
+
+  <!-- ============================================ -->
+  <!-- CONTACT PAGE -->
+  <!-- ============================================ -->
+  <url>
+    <loc>https://velvetluxurysalon.in/contact</loc>
+    <lastmod>2025-12-29</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.85</priority>
+    <image:image>
+      <image:loc>https://velvetluxurysalon.in/contact/location-map.jpg</image:loc>
+      <image:title>Velvet Luxury Salon Location</image:title>
+      <image:caption>Find us at Bharathi Nagar, Bhavani, Erode</image:caption>
+    </image:image>
+  </url>
+
+  <!-- ============================================ -->
+  <!-- TESTIMONIALS PAGE -->
+  <!-- ============================================ -->
+  <url>
+    <loc>https://velvetluxurysalon.in/testimonials</loc>
+    <lastmod>2025-12-29</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.75</priority>
+  </url>
+
+  <!-- ============================================ -->
+  <!-- FAQ PAGE -->
+  <!-- ============================================ -->
+  <url>
+    <loc>https://velvetluxurysalon.in/faq</loc>
+    <lastmod>2025-12-29</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.70</priority>
+  </url>
+
+  <!-- ============================================ -->
+  <!-- SPECIAL OFFERS PAGE -->
+  <!-- ============================================ -->
+  <url>
+    <loc>https://velvetluxurysalon.in/offers</loc>
+    <lastmod>2025-12-29</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.90</priority>
+    <image:image>
+      <image:loc>https://velvetluxurysalon.in/offers/current-offers.jpg</image:loc>
+      <image:title>Special Offers and Discounts</image:title>
+      <image:caption>Current promotions and special deals at Velvet Luxury Salon</image:caption>
+    </image:image>
+  </url>
+
+  <!-- ============================================ -->
+  <!-- PRODUCTS PAGE -->
+  <!-- ============================================ -->
+  <url>
+    <loc>https://velvetluxurysalon.in/products</loc>
+    <lastmod>2025-12-29</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.75</priority>
+    <image:image>
+      <image:loc>https://velvetluxurysalon.in/products/hair-care-products.jpg</image:loc>
+      <image:title>Professional Hair Care Products</image:title>
+      <image:caption>Premium hair care products available at our salon</image:caption>
+    </image:image>
+  </url>
+
+  <!-- ============================================ -->
+  <!-- LEGAL PAGES -->
+  <!-- ============================================ -->
+  <url>
+    <loc>https://velvetluxurysalon.in/privacy-policy</loc>
+    <lastmod>2025-12-29</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.30</priority>
+  </url>
+
+  <url>
+    <loc>https://velvetluxurysalon.in/terms-of-service</loc>
+    <lastmod>2025-12-29</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.30</priority>
+  </url>
+
+</urlset>
