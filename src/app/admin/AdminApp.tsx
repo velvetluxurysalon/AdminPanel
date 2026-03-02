@@ -10,7 +10,7 @@ import Login from "./pages/Login";
 // @ts-ignore
 import Dashboard from "./pages/Dashboard";
 // @ts-ignore
-import Reception from "./pages/Reception";
+import Reception from "./pages/reception/Reception";
 // @ts-ignore
 import Appointments from "./pages/Appointments";
 // @ts-ignore
