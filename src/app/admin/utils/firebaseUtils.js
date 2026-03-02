@@ -2454,6 +2454,90 @@ export const updateAppointmentStatus = async (
   }
 };
 
+export const confirmAppointment = async (
+  dateFolder,
+  appointmentId,
+  customerId,
+  appointmentData = null,
+) => {
+  try {
+    // 1. Update in appointments/{dateFolder}/bookings
+    if (dateFolder) {
+      await updateDoc(
+        doc(db, `appointments/${dateFolder}/bookings/${appointmentId}`),
+        {
+          status: "confirmed",
+          confirmedAt: serverTimestamp(),
+        },
+      );
+    }
+
+    // 2. Update in customers/{customerId}/appointments
+    const customerAppointmentsQuery = query(
+      collection(db, `customers/${customerId}/appointments`),
+      where("id", "==", appointmentId),
+    );
+    const customerAppointmentsSnapshot = await getDocs(
+      customerAppointmentsQuery,
+    );
+
+    if (!customerAppointmentsSnapshot.empty) {
+      const customerAptDoc = customerAppointmentsSnapshot.docs[0];
+      await updateDoc(customerAptDoc.ref, {
+        status: "confirmed",
+        confirmedAt: serverTimestamp(),
+      });
+    }
+
+    // 3. Send confirmation email if appointment data is available
+    if (appointmentData) {
+      try {
+        const emailPayload = {
+          customerName: appointmentData.customerName,
+          customerEmail: appointmentData.customerEmail,
+          customerPhone: appointmentData.customerPhone,
+          serviceName: appointmentData.serviceName,
+          appointmentDate: appointmentData.appointmentDate,
+          appointmentTime: appointmentData.appointmentTime,
+          stylistName: appointmentData.stylistName || null,
+          duration: appointmentData.duration || null,
+          notes: appointmentData.notes || null,
+        };
+
+        console.log("📧 Sending confirmation email...", emailPayload);
+
+        const response = await fetch("/api/send-appointment-confirmation", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(emailPayload),
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+          console.log("✅ Confirmation email sent successfully:", result);
+        } else {
+          const errorData = await response.json();
+          console.warn(
+            "⚠️ Failed to send confirmation email:",
+            errorData.error,
+          );
+          // Don't throw - email failure shouldn't block appointment confirmation
+        }
+      } catch (emailError) {
+        console.warn("⚠️ Error sending confirmation email:", emailError);
+        // Don't throw - email failure shouldn't block appointment confirmation
+      }
+    }
+
+    return true;
+  } catch (error) {
+    console.error("Error confirming appointment:", error);
+    throw error;
+  }
+};
+
 export const cancelAppointment = async (appointmentId) => {
   try {
     await updateDocument("appointments", appointmentId, {

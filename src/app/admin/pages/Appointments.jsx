@@ -17,6 +17,7 @@ import {
   getFrontendBookings,
   updateAppointmentStatus,
   checkInAppointment,
+  confirmAppointment,
 } from "../utils/firebaseUtils";
 import AddAppointmentModal from "./reception/modals/AddAppointmentModal";
 
@@ -27,6 +28,7 @@ const Appointments = () => {
   const [success, setSuccess] = useState("");
   const [filter, setFilter] = useState("upcoming"); // 'upcoming', 'today', 'all', 'expired'
   const [checkingInId, setCheckingInId] = useState(null);
+  const [confirmingId, setConfirmingId] = useState(null);
   const [showAddAppointmentModal, setShowAddAppointmentModal] = useState(false);
 
   const fetchAppointments = async () => {
@@ -122,6 +124,28 @@ const Appointments = () => {
     } catch (err) {
       console.error("Cancel error:", err);
       setError("Failed to cancel appointment");
+    }
+  };
+
+  const handleConfirmAppointment = async (appointment) => {
+    try {
+      setConfirmingId(appointment.id);
+      await confirmAppointment(
+        appointment.dateFolder,
+        appointment.id,
+        appointment.customerId,
+        appointment, // Pass full appointment data for email sending
+      );
+      setSuccess(
+        "Appointment confirmed successfully! Confirmation email sent to customer.",
+      );
+      setTimeout(() => setSuccess(""), 3000);
+      fetchAppointments();
+    } catch (err) {
+      console.error("Confirm error:", err);
+      setError("Failed to confirm appointment: " + err.message);
+    } finally {
+      setConfirmingId(null);
     }
   };
 
@@ -557,6 +581,35 @@ const Appointments = () => {
                     </span>
 
                     <div style={{ display: "flex", gap: "0.5rem" }}>
+                      {appointment.status === "pending" && (
+                        <button
+                          onClick={() => handleConfirmAppointment(appointment)}
+                          disabled={confirmingId === appointment.id}
+                          style={{
+                            padding: "0.4rem 0.75rem",
+                            background: "var(--admin-info)",
+                            border: "none",
+                            borderRadius: "var(--admin-radius-sm)",
+                            color: "white",
+                            cursor:
+                              confirmingId === appointment.id
+                                ? "not-allowed"
+                                : "pointer",
+                            fontSize: "0.8rem",
+                            fontWeight: 600,
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "0.25rem",
+                            opacity: confirmingId === appointment.id ? 0.6 : 1,
+                          }}
+                        >
+                          <CheckCircle size={14} />
+                          {confirmingId === appointment.id
+                            ? "Confirming..."
+                            : "Confirm"}
+                        </button>
+                      )}
+
                       {canCheckIn && (
                         <button
                           onClick={() => handleCheckIn(appointment)}
