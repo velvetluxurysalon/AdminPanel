@@ -3576,3 +3576,62 @@ export const incrementCouponUsage = async (couponCode) => {
     throw error;
   }
 };
+// ============================================
+// SPIN WHEEL MANAGEMENT
+// ============================================
+
+export const awardCustomerSpin = async (
+  customerId,
+  customerName,
+  pointsWon,
+  awardedBy = "admin",
+) => {
+  try {
+    const timestamp = new Date();
+    const dateKey = timestamp.toDateString();
+
+    const result = await runTransaction(db, async (transaction) => {
+      // Get customer document
+      const customerRef = doc(db, `customers/${customerId}`);
+      const customerDoc = await transaction.get(customerRef);
+
+      if (!customerDoc.exists()) {
+        throw new Error("Customer not found");
+      }
+
+      // Create/update spin record with a timestamp key for flexibility
+      const spinTimeKey = `${dateKey}-${Date.now()}`;
+      const spinDocRef = doc(
+        db,
+        `customers/${customerId}/spins/${spinTimeKey}`,
+      );
+
+      // Record the awarded spin
+      transaction.set(spinDocRef, {
+        timestamp: serverTimestamp(),
+        pointsWon,
+        isJackpot: false,
+        date: dateKey,
+        awardedBy: awardedBy,
+        awardedManually: true,
+      });
+
+      // Update customer loyalty points
+      const currentPoints = customerDoc.data().loyaltyPoints || 0;
+      transaction.update(customerRef, {
+        loyaltyPoints: currentPoints + pointsWon,
+      });
+
+      return {
+        pointsAwarded: pointsWon,
+        success: true,
+        message: `${pointsWon} points awarded to ${customerName}`,
+      };
+    });
+
+    return result;
+  } catch (error) {
+    console.error("Error awarding spin:", error);
+    throw error;
+  }
+};
