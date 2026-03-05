@@ -801,3 +801,43 @@ export const updateNewsletterContent = async (
     throw error;
   }
 };
+// ============================================
+// OFFER SCROLLER MANAGEMENT
+// ============================================
+
+export interface OfferText {
+  text: string;
+  isActive: boolean;
+  updatedAt?: any;
+}
+
+export const getOfferText = async (): Promise<OfferText | null> => {
+  try {
+    const docRef = doc(db, "websiteContent", "offerScroller");
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+      return docSnap.data() as OfferText;
+    }
+    return null;
+  } catch (error) {
+    console.error("Error fetching offer text:", error);
+    throw error;
+  }
+};
+
+export const updateOfferText = async (
+  offerText: string,
+  isActive: boolean = true,
+): Promise<void> => {
+  try {
+    const docRef = doc(db, "websiteContent", "offerScroller");
+    await setDoc(docRef, {
+      text: offerText,
+      isActive: isActive,
+      updatedAt: serverTimestamp(),
+    });
+  } catch (error) {
+    console.error("Error updating offer text:", error);
+    throw error;
+  }
+};

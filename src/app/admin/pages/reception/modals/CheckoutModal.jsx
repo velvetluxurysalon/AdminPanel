@@ -617,14 +617,18 @@ const CheckoutModal = ({
   };
 
   const handleDoneClick = () => {
-    // Call parent callback first to close the modal immediately
-    if (invoiceData) {
-      onPaymentComplete(invoiceData);
-    } else {
+    // Prevent multiple calls by checking if we still have invoice data
+    // and resetting payment completed state immediately
+    if (!paymentCompleted || !invoiceData) {
       onClose();
+      return;
     }
 
-    // Reset payment state after closing
+    // Call parent callback to process payment completion
+    // This will trigger email sending and other completion flows
+    const dataToSend = invoiceData;
+    
+    // Reset payment state BEFORE calling callback to prevent re-triggering
     setPaymentCompleted(false);
     setDiscountType("none");
     setDiscountValue("");
@@ -636,6 +640,9 @@ const CheckoutModal = ({
     setCouponData(null);
     setCouponError("");
     setInvoiceData(null);
+
+    // Call completion handler after state is reset
+    onPaymentComplete(dataToSend);
   };
 
   const generateBillTextForShare = () => {
@@ -909,7 +916,7 @@ const CheckoutModal = ({
               </div>
             </div>
             <button
-              onClick={handleDoneClick}
+              onClick={handleCloseModal}
               style={{
                 background: "none",
                 border: "none",

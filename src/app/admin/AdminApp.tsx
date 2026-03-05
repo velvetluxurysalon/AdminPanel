@@ -46,6 +46,8 @@ import FAQsContent from "./pages/FAQsContent";
 // @ts-ignore
 import OffersContent from "./pages/OffersContent";
 // @ts-ignore
+import OfferScrollerContent from "./pages/OfferScrollerContent";
+// @ts-ignore
 import NewsletterContent from "./pages/NewsletterContent";
 // @ts-ignore
 import MembershipManagement from "./pages/Membership";
@@ -145,6 +147,7 @@ const DashboardLayout = () => {
     { path: "/admin/reviews", icon: Star, label: "Reviews" },
     { path: "/admin/faqs", icon: FileText, label: "FAQs" },
     { path: "/admin/offers", icon: Gift, label: "Special Offers" },
+    { path: "/admin/offer-scroller", icon: Mail, label: "Offer Banner" },
     { path: "/admin/newsletter", icon: Mail, label: "Newsletter" },
     { path: "/admin/contact", icon: Phone, label: "Contact Info" },
   ];
@@ -394,6 +397,10 @@ const DashboardLayout = () => {
               <Route path="/reviews" element={<ReviewsManagement />} />
               <Route path="/faqs" element={<FAQsContent />} />
               <Route path="/offers" element={<OffersContent />} />
+              <Route
+                path="/offer-scroller"
+                element={<OfferScrollerContent />}
+              />
               <Route path="/newsletter" element={<NewsletterContent />} />
 
               {/* Admin-only routes */}

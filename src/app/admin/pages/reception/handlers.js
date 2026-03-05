@@ -216,112 +216,113 @@ export const handleCompletePayment = async (
       couponCode: invoiceData.couponCode,
     });
 
-    await createInvoice(invoiceData);
-
-    // Generate and store bill PDF in Firebase Storage
-    let billDownloadUrl = null;
-    try {
-      console.log("📄 [Handler] Generating and storing bill PDF...");
-
-      // Fetch the visit to get complete data for PDF generation
-      const visit = await getDocument("visits", invoiceData.visitId);
-
-      const billResult = await generateAndStoreBillPDFWithRetry(
-        invoiceData,
-        visit,
+    // ⚠️ SAFEGUARD: Check if visit is already completed to prevent duplicate processing
+    const existingVisit = await getDocument("visits", invoiceData.visitId);
+    if (existingVisit?.status === "COMPLETED") {
+      console.warn(
+        "⚠️ [Handler] Visit already completed. Skipping duplicate payment processing.",
+        invoiceData.visitId,
       );
-
-      if (billResult.success) {
-        billDownloadUrl = billResult.url;
-        console.log(
-          "✅ [Handler] Bill PDF stored successfully:",
-          billDownloadUrl,
-        );
-
-        // Store the PDF URL in the invoice document for future reference
-        await updateVisit(invoiceData.visitId, {
-          billDownloadUrl: billDownloadUrl,
-          billStorageRef: billResult.storageRef,
-        });
-      } else {
-        console.warn(
-          "⚠️ [Handler] Failed to generate/store bill PDF:",
-          billResult.error,
-        );
-        // Don't fail the entire checkout if PDF generation fails
-      }
-    } catch (pdfError) {
-      console.error(
-        "❌ [Handler] PDF generation error (non-blocking):",
-        pdfError,
-      );
-      // Don't block the checkout if PDF generation fails
+      setShowCheckoutModal(false);
+      return;
     }
 
-    // Update visit with ALL billing details and complete status
-    // CRITICAL: Store totalAmount as the final discounted amount (not subtotal)
+    // ⚡ CRITICAL OPERATIONS (must await):
+    // 1. Create invoice in database
+    await createInvoice(invoiceData);
+
+    // 2. Update visit status to COMPLETED immediately
+    // This is the most important operation for UI responsiveness
     await updateVisit(invoiceData.visitId, {
       paidAmount: parseFloat(invoiceData.paidAmount) || 0,
       status: "COMPLETED",
       subtotal: invoiceData.subtotal || 0,
-      totalAmount: invoiceData.totalAmount || 0, // This should be after-discount amount
+      totalAmount: invoiceData.totalAmount || 0,
       discountAmount: invoiceData.discountAmount || 0,
       discountType: invoiceData.discountType || "none",
-      discountPercent: invoiceData.discountPercent || 0, // For percentage-based discounts
+      discountPercent: invoiceData.discountPercent || 0,
       paymentMode: invoiceData.paymentMode || "cash",
-
-      // ALL coupon and discount details
       couponCode: invoiceData.couponCode || null,
       couponIsCapped: invoiceData.couponIsCapped || false,
       couponOriginalDiscount: invoiceData.couponOriginalDiscount || 0,
       couponAppliedDiscount: invoiceData.couponAppliedDiscount || 0,
-
-      // Loyalty points
       pointsUsed: invoiceData.pointsUsed || 0,
       pointsDiscountAmount: invoiceData.pointsDiscountAmount || 0,
       loyaltyPointsEarned: invoiceData.loyaltyPointsEarned || 0,
-
       invoiceId: invoiceData.invoiceId,
-      billDownloadUrl: billDownloadUrl,
     });
 
-    // Send checkout email to customer and admin
-    try {
-      console.log("📧 [Handler] Preparing email data...");
-      const emailData = {
-        ...invoiceData,
-        billDownloadUrl: billDownloadUrl,
-      };
-      const checkoutEmailData = formatCheckoutDataForEmail(emailData);
-      console.log("📧 [Handler] Email data prepared:", {
-        customerName: checkoutEmailData.customerName,
-        customerEmail: checkoutEmailData.customerEmail,
-        totalAmount: checkoutEmailData.totalAmount,
-      });
-
-      const emailResult = await sendCheckoutEmail(checkoutEmailData);
-
-      if (emailResult.success) {
-        console.log("✅ [Handler] Checkout email sent successfully");
-      } else {
-        console.warn(
-          "⚠️ [Handler] Email sent but with warning:",
-          emailResult.message,
-        );
-      }
-    } catch (emailError) {
-      console.error(
-        "❌ [Handler] Email sending error (non-blocking):",
-        emailError,
-      );
-      // Don't block the checkout if email fails
-    }
-
+    // ✅ Show success and close modal IMMEDIATELY (before background tasks)
     setSuccess(`Payment completed for ${invoiceData.customerName}!`);
-    setTimeout(() => setSuccess(""), 3000);
-    await fetchAllData();
     setActiveSection("completed");
     setShowCheckoutModal(false);
+
+    // ⏰ BACKGROUND OPERATIONS (run in parallel, don't await):
+    // These happen while the UI updates and modal closes
+    (async () => {
+      try {
+        // Generate and store bill PDF (slow operation - background)
+        console.log("📄 [Handler] Generating bill PDF in background...");
+        const visit = await getDocument("visits", invoiceData.visitId);
+        const billResult = await generateAndStoreBillPDFWithRetry(
+          invoiceData,
+          visit,
+        );
+
+        if (billResult.success) {
+          console.log(
+            "✅ [Handler] Bill PDF stored successfully:",
+            billResult.url,
+          );
+          // Update with PDF URL
+          await updateVisit(invoiceData.visitId, {
+            billDownloadUrl: billResult.url,
+            billStorageRef: billResult.storageRef,
+          });
+        } else {
+          console.warn(
+            "⚠️ [Handler] Failed to generate/store bill PDF:",
+            billResult.error,
+          );
+        }
+      } catch (pdfError) {
+        console.error("❌ [Handler] PDF generation error:", pdfError);
+      }
+
+      try {
+        // Send email (slow operation - background)
+        console.log("📧 [Handler] Sending checkout email in background...");
+        const emailData = {
+          ...invoiceData,
+          billDownloadUrl: invoiceData.billDownloadUrl || null,
+        };
+        const checkoutEmailData = formatCheckoutDataForEmail(emailData);
+        const emailResult = await sendCheckoutEmail(checkoutEmailData);
+
+        if (emailResult.success) {
+          console.log("✅ [Handler] Checkout email sent successfully");
+        } else {
+          console.warn(
+            "⚠️ [Handler] Email sent but with warning:",
+            emailResult.message,
+          );
+        }
+      } catch (emailError) {
+        console.error("❌ [Handler] Email sending error:", emailError);
+      }
+
+      try {
+        // Refresh data (background)
+        console.log("🔄 [Handler] Refreshing data in background...");
+        await fetchAllData();
+        console.log("✅ [Handler] Data refreshed");
+      } catch (refreshError) {
+        console.error("❌ [Handler] Error refreshing data:", refreshError);
+      }
+    })();
+
+    // Clear success message after 3 seconds
+    setTimeout(() => setSuccess(""), 3000);
   } catch (err) {
     console.error("❌ [Handler] Payment error:", err);
     setError("Payment failed: " + err.message);
