@@ -57,7 +57,7 @@ const AddAppointmentModal = ({ onClose, onSuccess }) => {
       try {
         setLoading(true);
         const [customersData, servicesData, staffData] = await Promise.all([
-          getCustomers(),
+          getCustomers(true),
           getServices(false),
           getStaff(),
         ]);
@@ -78,7 +78,8 @@ const AddAppointmentModal = ({ onClose, onSuccess }) => {
   const filteredCustomers = customers.filter(
     (c) =>
       c.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      c.phone?.includes(searchTerm),
+      c.phone?.includes(searchTerm) ||
+      c.email?.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
   const handleSelectCustomer = (customer) => {

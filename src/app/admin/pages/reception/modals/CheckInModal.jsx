@@ -47,7 +47,7 @@ const CheckInModal = ({ onClose, onCheckIn }) => {
       try {
         setLoading(true);
         const [allCustomers, servicesData, productsData] = await Promise.all([
-          getCustomers(),
+          getCustomers(true),
           getServices(false),
           getProducts(),
         ]);
@@ -78,7 +78,8 @@ const CheckInModal = ({ onClose, onCheckIn }) => {
   const filteredCustomers = customers.filter(
     (customer) =>
       customer.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      customer.phone?.includes(searchTerm),
+      customer.phone?.includes(searchTerm) ||
+      customer.email?.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
   const handleSelectCustomer = (customer) => {
@@ -1173,5 +1174,3 @@ const CheckInModal = ({ onClose, onCheckIn }) => {
 };
 
 export default CheckInModal;
-
-

@@ -31,6 +31,20 @@ import {
 // UTILITY FUNCTIONS
 // ============================================
 
+// Capitalize first letter of a string
+const capitalizeFirstLetter = (str) => {
+  if (!str || typeof str !== "string") return str;
+  return str.charAt(0).toUpperCase() + str.slice(1);
+};
+
+// Capitalize first letter of each item in an array
+const capitalizeArrayItems = (arr) => {
+  if (!Array.isArray(arr)) return arr;
+  return arr.map((item) =>
+    typeof item === "string" ? capitalizeFirstLetter(item) : item,
+  );
+};
+
 export const convertTimestampToDate = (timestamp) => {
   if (!timestamp) return null;
   if (timestamp instanceof Date) return timestamp;
@@ -276,21 +290,77 @@ export const addCustomer = async (customerData) => {
     // Check if customer with this phone already exists
     const existingDoc = await getDoc(doc(db, "customers", phone));
     if (existingDoc.exists()) {
-      // Return existing customer data
-      console.log(
-        "✅ [AddCustomer] Customer already exists with phone:",
-        phone,
-      );
+      // Customer already exists - update with any new information provided
+      const existingData = existingDoc.data();
+      const updateData = {};
+      let hasUpdates = false;
+
+      // Update name if provided and different
+      if (
+        customerData.name &&
+        capitalizeFirstLetter(customerData.name) !== existingData.name
+      ) {
+        updateData.name = capitalizeFirstLetter(customerData.name);
+        hasUpdates = true;
+      }
+
+      // Update email if provided and different
+      if (customerData.email && customerData.email !== existingData.email) {
+        updateData.email = customerData.email;
+        hasUpdates = true;
+      }
+
+      // Update gender if provided and different
+      if (customerData.gender && customerData.gender !== existingData.gender) {
+        updateData.gender = customerData.gender;
+        hasUpdates = true;
+      }
+
+      // Update dateOfBirth if provided and different
+      if (
+        customerData.dateOfBirth &&
+        customerData.dateOfBirth !== existingData.dateOfBirth
+      ) {
+        updateData.dateOfBirth = customerData.dateOfBirth;
+        hasUpdates = true;
+      }
+
+      // Update membership type if provided and different
+      if (
+        customerData.membershipType &&
+        customerData.membershipType !== existingData.membershipType
+      ) {
+        updateData.membershipType = customerData.membershipType;
+        hasUpdates = true;
+      }
+
+      // If there are updates, save them to Firebase
+      if (hasUpdates) {
+        updateData.updatedAt = serverTimestamp();
+        await updateDoc(doc(db, "customers", phone), updateData);
+        console.log(
+          "✅ [AddCustomer] Customer already exists, updated fields:",
+          Object.keys(updateData),
+        );
+      } else {
+        console.log(
+          "ℹ️ [AddCustomer] Customer already exists with no new data to update:",
+          phone,
+        );
+      }
+
+      // Return updated customer data
       return {
         id: phone,
-        ...existingDoc.data(),
+        ...existingData,
+        ...updateData,
       };
     }
 
     // Create customer with phone as document ID
     const now = new Date();
     const customerDoc = {
-      name: customerData.name || "",
+      name: capitalizeFirstLetter(customerData.name) || "",
       phone: phone,
       contactNo: phone, // Also store as contactNo for compatibility
       email: customerData.email || "",
@@ -383,7 +453,7 @@ export const updateCustomer = async (phone, customerData) => {
       : normalizedPhone;
 
     const updateData = {
-      name: customerData.name || "",
+      name: capitalizeFirstLetter(customerData.name) || "",
       email: customerData.email || "",
       phone: newPhone,
       dateOfBirth: customerData.dateOfBirth || null, // Include DOB in update
@@ -438,7 +508,7 @@ export const getCustomers = async (includeDeleted = false) => {
 
 export const searchCustomers = async (searchTerm) => {
   try {
-    const allCustomers = await getCustomers(false);
+    const allCustomers = await getCustomers(true);
     // Search by phone (primary), name, or email - handle both phone and contactNo field names
     return allCustomers.filter((customer) => {
       const phone = customer.phone || customer.contactNo || "";
@@ -462,6 +532,19 @@ export const deleteCustomer = async (customerId) => {
     await softDeleteDocument("customers", customerId);
   } catch (error) {
     console.error("Error deleting customer:", error);
+    throw error;
+  }
+};
+
+export const restoreCustomer = async (customerId) => {
+  try {
+    await updateDocument("customers", customerId, {
+      deletedAt: null,
+      updatedAt: serverTimestamp(),
+    });
+    console.log("✅ Customer restored successfully:", customerId);
+  } catch (error) {
+    console.error("Error restoring customer:", error);
     throw error;
   }
 };
@@ -625,15 +708,15 @@ export const redeemLoyaltyPoints = async (
 export const addStaff = async (staffData) => {
   try {
     const staffId = await addDocument("staff", {
-      name: staffData.name,
+      name: capitalizeFirstLetter(staffData.name),
       phone: staffData.phone || "",
       email: staffData.email || "",
-      role: staffData.role,
-      specialties: Array.isArray(staffData.specialties)
-        ? staffData.specialties
-        : [],
-      experience: staffData.experience || "",
-      bio: staffData.bio || "",
+      role: capitalizeFirstLetter(staffData.role),
+      specialties: capitalizeArrayItems(
+        Array.isArray(staffData.specialties) ? staffData.specialties : [],
+      ),
+      experience: capitalizeFirstLetter(staffData.experience) || "",
+      bio: capitalizeFirstLetter(staffData.bio) || "",
       image: staffData.image || "",
       socials: {
         facebook: staffData.socials?.facebook || "",
@@ -665,7 +748,22 @@ export const getStaff = async () => {
 
 export const updateStaff = async (staffId, staffData) => {
   try {
-    await updateDocument("staff", staffId, staffData);
+    const capitalizedData = { ...staffData };
+    if (capitalizedData.name)
+      capitalizedData.name = capitalizeFirstLetter(capitalizedData.name);
+    if (capitalizedData.role)
+      capitalizedData.role = capitalizeFirstLetter(capitalizedData.role);
+    if (capitalizedData.experience)
+      capitalizedData.experience = capitalizeFirstLetter(
+        capitalizedData.experience,
+      );
+    if (capitalizedData.bio)
+      capitalizedData.bio = capitalizeFirstLetter(capitalizedData.bio);
+    if (capitalizedData.specialties)
+      capitalizedData.specialties = capitalizeArrayItems(
+        capitalizedData.specialties,
+      );
+    await updateDocument("staff", staffId, capitalizedData);
   } catch (error) {
     console.error("Error updating staff:", error);
     throw error;
@@ -721,7 +819,7 @@ export const addServiceCategory = async (categoryData) => {
         : 0;
 
     const categoryId = await addDocument("serviceCategories", {
-      name: categoryData.name,
+      name: capitalizeFirstLetter(categoryData.name),
       order: maxOrder + 1,
       isActive: true,
       createdAt: serverTimestamp(),
@@ -735,8 +833,11 @@ export const addServiceCategory = async (categoryData) => {
 
 export const updateServiceCategory = async (categoryId, categoryData) => {
   try {
+    const capitalizedData = { ...categoryData };
+    if (capitalizedData.name)
+      capitalizedData.name = capitalizeFirstLetter(capitalizedData.name);
     await updateDocument("serviceCategories", categoryId, {
-      ...categoryData,
+      ...capitalizedData,
       updatedAt: serverTimestamp(),
     });
   } catch (error) {
@@ -799,12 +900,12 @@ export const initializeDefaultCategories = async () => {
 export const addService = async (serviceData) => {
   try {
     const serviceId = await addDocument("services", {
-      name: serviceData.name,
-      category: serviceData.category || "",
+      name: capitalizeFirstLetter(serviceData.name),
+      category: capitalizeFirstLetter(serviceData.category) || "",
       price: parseFloat(serviceData.price),
       duration: parseInt(serviceData.duration) || 30,
       gender: serviceData.gender || "any",
-      description: serviceData.description || "",
+      description: capitalizeFirstLetter(serviceData.description) || "",
       image: serviceData.image || "",
       deletedAt: null,
       createdAt: serverTimestamp(),
@@ -847,8 +948,19 @@ export const getRecentServices = async (days = 7) => {
 
 export const updateService = async (serviceId, serviceData) => {
   try {
+    const capitalizedData = { ...serviceData };
+    if (capitalizedData.name)
+      capitalizedData.name = capitalizeFirstLetter(capitalizedData.name);
+    if (capitalizedData.category)
+      capitalizedData.category = capitalizeFirstLetter(
+        capitalizedData.category,
+      );
+    if (capitalizedData.description)
+      capitalizedData.description = capitalizeFirstLetter(
+        capitalizedData.description,
+      );
     await updateDocument("services", serviceId, {
-      ...serviceData,
+      ...capitalizedData,
       updatedAt: serverTimestamp(),
     });
   } catch (error) {
@@ -882,11 +994,11 @@ export const restoreService = async (serviceId) => {
 export const addProduct = async (productData) => {
   try {
     const productId = await addDocument("products", {
-      name: productData.name,
-      category: productData.category || "",
+      name: capitalizeFirstLetter(productData.name),
+      category: capitalizeFirstLetter(productData.category) || "",
       price: parseFloat(productData.price),
       stock: parseInt(productData.stock) || 0,
-      description: productData.description || "",
+      description: capitalizeFirstLetter(productData.description) || "",
       imageUrl: productData.imageUrl || null,
     });
     return productId;
@@ -909,7 +1021,18 @@ export const getProducts = async () => {
 
 export const updateProduct = async (productId, productData) => {
   try {
-    await updateDocument("products", productId, productData);
+    const capitalizedData = { ...productData };
+    if (capitalizedData.name)
+      capitalizedData.name = capitalizeFirstLetter(capitalizedData.name);
+    if (capitalizedData.category)
+      capitalizedData.category = capitalizeFirstLetter(
+        capitalizedData.category,
+      );
+    if (capitalizedData.description)
+      capitalizedData.description = capitalizeFirstLetter(
+        capitalizedData.description,
+      );
+    await updateDocument("products", productId, capitalizedData);
   } catch (error) {
     console.error("Error updating product:", error);
     throw error;
