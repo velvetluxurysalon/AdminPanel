@@ -34,7 +34,7 @@ import Referrals from "./pages/Referrals";
 // @ts-ignore
 import Attendance from "./pages/Attendance";
 // @ts-ignore
-import HeroContent from "./pages/HeroContent";
+import HeroContentAdvanced from "./pages/HeroContentAdvanced";
 // @ts-ignore
 import ContactContent from "./pages/ContactContent";
 // @ts-ignore
@@ -391,7 +391,7 @@ const DashboardLayout = () => {
               <Route path="/memberships" element={<MembershipManagement />} />
               <Route path="/coupons" element={<Coupons />} />
               <Route path="/attendance" element={<Attendance />} />
-              <Route path="/hero" element={<HeroContent />} />
+              <Route path="/hero" element={<HeroContentAdvanced />} />
               <Route path="/contact" element={<ContactContent />} />
               <Route path="/gallery" element={<GalleryContent />} />
               <Route path="/reviews" element={<ReviewsManagement />} />

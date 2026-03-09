@@ -515,6 +515,7 @@ const CheckoutModal = ({
         discountPercent: discountType === "percentage" ? discountValue : 0,
         discountType: discountType,
         discountAmount: finalDiscount,
+        tax: 0, // Added: Tax field (default 0, can be calculated if needed)
         pointsUsed: discountType === "coins" ? parseFloat(coinsUsed) : 0,
         pointsDiscountAmount: coinsDiscount,
         loyaltyPointsEarned: pointsEarned,
@@ -627,7 +628,7 @@ const CheckoutModal = ({
     // Call parent callback to process payment completion
     // This will trigger email sending and other completion flows
     const dataToSend = invoiceData;
-    
+
     // Reset payment state BEFORE calling callback to prevent re-triggering
     setPaymentCompleted(false);
     setDiscountType("none");

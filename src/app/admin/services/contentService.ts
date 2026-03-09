@@ -21,14 +21,26 @@ import { db, storage } from "../../../firebaseConfig";
 // HERO SECTION MANAGEMENT
 // ============================================
 
+export interface HeroLayer {
+  id: string;
+  type: "image" | "video" | "color";
+  content: string; // URL for image/video, hex code for color
+  opacity: number;
+  order: number;
+}
+
 export interface HeroSlide {
   id: string;
-  title: string;
-  subtitle: string;
-  image: string;
+  heading: string;
+  subheading: string;
+  layers: HeroLayer[];
   ctaButtonText?: string;
   ctaButtonLink?: string;
   order: number;
+  // Legacy support
+  title?: string;
+  subtitle?: string;
+  image?: string;
 }
 
 export interface HeroContent {
@@ -44,19 +56,59 @@ export const getHeroContent = async (): Promise<HeroContent | null> => {
       const data = docSnap.data();
       // Support both old and new formats
       if (data.slides) {
-        return data as HeroContent;
+        // Normalize slides to ensure legacy support
+        const normalizedSlides = data.slides.map((slide: any) => ({
+          id: slide.id,
+          heading: slide.heading || slide.title || "",
+          subheading: slide.subheading || slide.subtitle || "",
+          layers:
+            slide.layers ||
+            (slide.image
+              ? [
+                  {
+                    id: `layer-${slide.id}`,
+                    type: "image" as const,
+                    content: slide.image,
+                    opacity: 1,
+                    order: 0,
+                  },
+                ]
+              : []),
+          ctaButtonText: slide.ctaButtonText,
+          ctaButtonLink: slide.ctaButtonLink,
+          order: slide.order,
+          // Keep legacy fields for compatibility
+          title: slide.title || slide.heading,
+          subtitle: slide.subtitle || slide.subheading,
+          image: slide.image || slide.layers?.[0]?.content,
+        }));
+        return { slides: normalizedSlides } as HeroContent;
       } else {
-        // Convert old format to new
+        // Convert old single-item format to new slides array
         return {
           slides: [
             {
               id: "slide-1",
-              title: data.title,
-              subtitle: data.subtitle,
-              image: data.image,
+              heading: data.title || "",
+              subheading: data.subtitle || "",
+              layers: data.image
+                ? [
+                    {
+                      id: "layer-1",
+                      type: "image" as const,
+                      content: data.image,
+                      opacity: 1,
+                      order: 0,
+                    },
+                  ]
+                : [],
               ctaButtonText: data.ctaButtonText,
               ctaButtonLink: data.ctaButtonLink,
               order: 0,
+              // Legacy fields
+              title: data.title,
+              subtitle: data.subtitle,
+              image: data.image,
             },
           ],
         };

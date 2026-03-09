@@ -47,36 +47,45 @@ function createTransporter() {
  * Generate beautiful HTML email template for checkout bill
  */
 function generateCheckoutEmailHTML(checkoutData) {
+  // Safely format items with proper data validation
   const itemsHTML = (checkoutData.items || [])
     .map(
       (item) => `
     <tr style="border-bottom: 1px solid #e0e0e0;">
       <td style="padding: 12px; text-align: left;">${item.name || "Item"}</td>
       <td style="padding: 12px; text-align: center;">${item.quantity || 1}</td>
-      <td style="padding: 12px; text-align: right;">₹${(item.price || 0).toFixed(2)}</td>
-      <td style="padding: 12px; text-align: right;">₹${((item.price || 0) * (item.quantity || 1)).toFixed(2)}</td>
+      <td style="padding: 12px; text-align: right;">₹${parseFloat(item.price || 0).toFixed(2)}</td>
+      <td style="padding: 12px; text-align: right;">₹${(parseFloat(item.price || 0) * (item.quantity || 1)).toFixed(2)}</td>
     </tr>
   `,
     )
     .join("");
 
-  const discountHTML = checkoutData.discount
-    ? `
-    <tr>
-      <td colspan="3" style="padding: 8px; text-align: right; font-weight: 500;">Discount:</td>
-      <td style="padding: 8px; text-align: right; color: #4caf50;">-₹${checkoutData.discount.toFixed(2)}</td>
+  // Discount row with coupon information if available
+  const discountAmount = parseFloat(checkoutData.discount || 0);
+  const discountHTML =
+    discountAmount > 0
+      ? `
+    <tr style="background-color: #f0f8f5; border-bottom: 1px solid #e0e0e0;">
+      <td colspan="3" style="padding: 8px; text-align: right; font-weight: 500;">
+        ${checkoutData.couponCode ? `Coupon Applied (${checkoutData.couponCode})` : "Discount"}:
+      </td>
+      <td style="padding: 8px; text-align: right; color: #4caf50; font-weight: 600;">-₹${discountAmount.toFixed(2)}</td>
     </tr>
   `
-    : "";
+      : "";
 
-  const taxHTML = checkoutData.tax
-    ? `
-    <tr>
+  // Tax row
+  const taxAmount = parseFloat(checkoutData.tax || 0);
+  const taxHTML =
+    taxAmount > 0
+      ? `
+    <tr style="border-bottom: 1px solid #e0e0e0;">
       <td colspan="3" style="padding: 8px; text-align: right; font-weight: 500;">Tax (GST):</td>
-      <td style="padding: 8px; text-align: right;">+₹${checkoutData.tax.toFixed(2)}</td>
+      <td style="padding: 8px; text-align: right;">+₹${taxAmount.toFixed(2)}</td>
     </tr>
   `
-    : "";
+      : "";
 
   return `
 <!DOCTYPE html>
@@ -365,8 +374,11 @@ export default async function handler(req, res) {
     console.log("  - Customer Name:", customerName);
     console.log("  - Customer Email:", customerEmail);
     console.log("  - Customer Phone:", customerPhone);
-    console.log("  - Total Amount:", totalAmount);
-    console.log("  - Paid Amount:", paidAmount);
+    console.log("  - Subtotal: ₹" + (subtotal || 0).toFixed(2));
+    console.log("  - Discount: ₹" + (discount || 0).toFixed(2));
+    console.log("  - Tax: ₹" + (tax || 0).toFixed(2));
+    console.log("  - Total Amount: ₹" + (totalAmount || 0).toFixed(2));
+    console.log("  - Paid Amount: ₹" + (paidAmount || 0).toFixed(2));
     console.log("  - Payment Method:", paymentMethod);
     console.log("  - Items Count:", items?.length || 0);
     console.log("  - Checkout Date:", checkoutDate);
