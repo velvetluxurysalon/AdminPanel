@@ -10,6 +10,8 @@ import Login from "./pages/Login";
 // @ts-ignore
 import Dashboard from "./pages/Dashboard";
 // @ts-ignore
+import EnhancedDashboard from "./pages/EnhancedDashboard";
+// @ts-ignore
 import Reception from "./pages/reception/Reception";
 // @ts-ignore
 import Appointments from "./pages/Appointments";
@@ -131,7 +133,7 @@ const DashboardLayout = () => {
   const allNavItems: NavItem[] = [
     { path: "/admin", icon: ClipboardList, label: "Reception" },
     { path: "/admin/appointments", icon: Calendar, label: "Appointments" },
-    { path: "/admin/dashboard", icon: BarChart3, label: "Dashboard" },
+    { path: "/admin/dashboard", icon: BarChart3, label: "Analytics" },
     { path: "/admin/services", icon: Scissors, label: "Services" },
     { path: "/admin/staff", icon: UserCog, label: "Staff" },
     { path: "/admin/salary-analytics", icon: DollarSign, label: "Payroll" },
@@ -160,6 +162,7 @@ const DashboardLayout = () => {
 
   // Receptionist hidden items (should not be visible)
   const receptionistHiddenPaths = [
+    "/admin/analytics",
     "/admin/dashboard",
     "/admin/salary-analytics",
     "/admin/customers",
@@ -376,7 +379,7 @@ const DashboardLayout = () => {
               <Route path="/" element={<Reception />} />
               <Route path="/appointments" element={<Appointments />} />
               <Route path="/visits/:id" element={<VisitDetail />} />
-              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/dashboard" element={<EnhancedDashboard />} />
               <Route path="/services" element={<Services />} />
               <Route path="/products" element={<Products />} />
               <Route path="/staff" element={<Staff />} />

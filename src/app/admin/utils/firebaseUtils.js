@@ -1843,10 +1843,30 @@ export const getTodayPunchStatus = async (staffId, staffName) => {
       return { hasPunchedIn: false, hasPunchedOut: false, record: null };
     }
 
+    // Handle new cycles array structure
+    const cycles = todayRecord.cycles || [];
+    const lastCycle = cycles[cycles.length - 1];
+
+    // Check if currently punched in (last cycle has punchInTime but no punchOutTime)
+    const hasPunchedIn = cycles.length > 0;
+    const hasPunchedOut = lastCycle && lastCycle.punchOutTime ? true : false;
+
+    // For display purposes, use the last cycle's punch in time
+    const record = {
+      ...todayRecord,
+      punchInTime: lastCycle?.punchInTime || null,
+      punchOutTime: lastCycle?.punchOutTime || null,
+      workHours: todayRecord.totalWorkHours || 0,
+      cycles: cycles,
+      dateStr,
+      staffName,
+      staffId,
+    };
+
     return {
-      hasPunchedIn: !!todayRecord.punchInTime,
-      hasPunchedOut: !!todayRecord.punchOutTime,
-      record: { ...todayRecord, dateStr, staffName, staffId },
+      hasPunchedIn,
+      hasPunchedOut,
+      record,
       dateStr,
     };
   } catch (error) {
@@ -1866,25 +1886,34 @@ export const punchInStaff = async (staffId, staffName) => {
       staffData = { staffId, createdAt: Timestamp.now() };
     }
 
-    // Check if already punched in today
-    if (staffData[dateStr] && staffData[dateStr].punchInTime) {
+    // Initialize cycles array if it doesn't exist
+    if (!staffData[dateStr]) {
+      staffData[dateStr] = {
+        cycles: [],
+        totalWorkHours: 0,
+        status: "present",
+      };
+    }
+
+    // Check if already punched in without punching out
+    const lastCycle =
+      staffData[dateStr].cycles?.[staffData[dateStr].cycles.length - 1];
+    if (lastCycle && lastCycle.punchInTime && !lastCycle.punchOutTime) {
       console.warn("Staff already punched in today");
       throw new Error(
-        "You have already punched in today. Use punch out or edit the record if needed.",
+        "Already punched in. Punch out first before punching in again.",
       );
     }
 
-    // Create punch-in record for today
+    // Add new punch-in cycle
     const now = Timestamp.now();
-    staffData[dateStr] = {
-      staffId: staffId,
+    staffData[dateStr].cycles.push({
       punchInTime: now,
       punchOutTime: null,
       workHours: 0,
-      status: "present",
-    };
+    });
 
-    // Save/update the staff document using setDoc with merge to ensure creation if not exists
+    // Save/update the staff document using setDoc with merge
     const docRef = doc(db, "staffAttendance", staffName);
     await setDoc(docRef, staffData, { merge: true });
 
@@ -1902,21 +1931,47 @@ export const punchOutStaff = async (staffId, staffName) => {
     const dateStr = today.toISOString().split("T")[0]; // YYYY-MM-DD format
 
     const staffData = await getDocument("staffAttendance", staffName);
-    if (!staffData || !staffData[dateStr] || !staffData[dateStr].punchInTime) {
+    if (
+      !staffData ||
+      !staffData[dateStr] ||
+      !staffData[dateStr].cycles ||
+      staffData[dateStr].cycles.length === 0
+    ) {
       throw new Error("No punch-in record found for today");
     }
 
-    const todayRecord = staffData[dateStr];
+    // Get the last cycle (most recent punch in)
+    const cycles = staffData[dateStr].cycles;
+    const lastCycle = cycles[cycles.length - 1];
+
+    if (!lastCycle.punchInTime || lastCycle.punchOutTime) {
+      throw new Error("No active punch-in record to punch out");
+    }
+
+    // Calculate work hours for this cycle
     const punchInTime =
-      todayRecord.punchInTime?.toDate?.() || new Date(todayRecord.punchInTime);
+      lastCycle.punchInTime?.toDate?.() || new Date(lastCycle.punchInTime);
     const punchOutTime = new Date();
     const workHours = (punchOutTime - punchInTime) / (1000 * 60 * 60);
 
-    // Update the punch-out time and work hours
-    staffData[dateStr] = {
-      ...staffData[dateStr],
+    // Update the last cycle with punch-out time and work hours
+    cycles[cycles.length - 1] = {
+      ...lastCycle,
       punchOutTime: Timestamp.now(),
       workHours: parseFloat(workHours.toFixed(2)),
+    };
+
+    // Calculate total work hours for the day
+    const totalWorkHours = cycles.reduce(
+      (sum, cycle) => sum + (cycle.workHours || 0),
+      0,
+    );
+
+    // Update the day record
+    staffData[dateStr] = {
+      ...staffData[dateStr],
+      cycles: cycles,
+      totalWorkHours: parseFloat(totalWorkHours.toFixed(2)),
       status: "present",
     };
 
