@@ -29,6 +29,7 @@ const HeroContentAdvanced = () => {
   const [showLayerForm, setShowLayerForm] = useState(false);
   const [selectedLayerId, setSelectedLayerId] = useState(null);
   const [editingLayer, setEditingLayer] = useState(null);
+  const [activeTab, setActiveTab] = useState("images"); // "images" or "text"
 
   // Form states
   const [slideForm, setSlideForm] = useState({
@@ -81,12 +82,26 @@ const HeroContentAdvanced = () => {
       return;
     }
 
+    if (!layerForm.content.trim()) {
+      setError("Please upload a background image for the slide");
+      return;
+    }
+
     try {
+      // Create layer from uploaded image
+      const layer = {
+        id: `layer-${Date.now()}`,
+        type: "image",
+        content: layerForm.content,
+        opacity: 1,
+        order: 0,
+      };
+
       const newSlide = {
         id: `slide-${Date.now()}`,
         heading: slideForm.heading,
         subheading: slideForm.subheading,
-        layers: [],
+        layers: [layer],
         ctaButtonText: slideForm.ctaButtonText,
         ctaButtonLink: slideForm.ctaButtonLink,
         order: slides.length,
@@ -101,6 +116,12 @@ const HeroContentAdvanced = () => {
         subheading: "",
         ctaButtonText: "",
         ctaButtonLink: "",
+      });
+      setLayerForm({
+        type: "image",
+        content: "",
+        opacity: 1,
+        order: 0,
       });
       setShowSlideForm(false);
       setSuccess("Slide added successfully");
@@ -303,6 +324,12 @@ const HeroContentAdvanced = () => {
               ctaButtonText: "",
               ctaButtonLink: "",
             });
+            setLayerForm({
+              type: "image",
+              content: "",
+              opacity: 1,
+              order: 0,
+            });
           }}
           style={{
             width: "100%",
@@ -365,7 +392,302 @@ const HeroContentAdvanced = () => {
 
       {/* Right Panel - Slide Editor */}
       <div style={{ flex: 1, overflowY: "auto" }}>
-        {selectedSlide ? (
+        {showSlideForm ? (
+          /* New Slide Form */
+          <div
+            style={{
+              backgroundColor: "#f9f9f9",
+              padding: "2rem",
+              borderRadius: "8px",
+            }}
+          >
+            <h2
+              style={{
+                fontSize: "1.5rem",
+                fontWeight: "600",
+                marginBottom: "1.5rem",
+              }}
+            >
+              Create New Slide
+            </h2>
+
+            {error && (
+              <div
+                style={{
+                  padding: "1rem",
+                  backgroundColor: "#fee2e2",
+                  color: "#991b1b",
+                  borderRadius: "4px",
+                  marginBottom: "1rem",
+                }}
+              >
+                {error}
+              </div>
+            )}
+
+            <div style={{ display: "grid", gap: "1.5rem" }}>
+              <div>
+                <label
+                  style={{
+                    display: "block",
+                    marginBottom: "0.5rem",
+                    fontWeight: "500",
+                  }}
+                >
+                  Heading *
+                </label>
+                <input
+                  type="text"
+                  value={slideForm.heading}
+                  onChange={(e) =>
+                    setSlideForm((prev) => ({
+                      ...prev,
+                      heading: e.target.value,
+                    }))
+                  }
+                  style={{
+                    width: "100%",
+                    padding: "0.75rem",
+                    border: "1px solid #e0e0e0",
+                    borderRadius: "4px",
+                    fontFamily: "inherit",
+                    fontSize: "1rem",
+                  }}
+                  placeholder="Main heading"
+                />
+              </div>
+
+              <div>
+                <label
+                  style={{
+                    display: "block",
+                    marginBottom: "0.5rem",
+                    fontWeight: "500",
+                  }}
+                >
+                  Subheading
+                </label>
+                <input
+                  type="text"
+                  value={slideForm.subheading}
+                  onChange={(e) =>
+                    setSlideForm((prev) => ({
+                      ...prev,
+                      subheading: e.target.value,
+                    }))
+                  }
+                  style={{
+                    width: "100%",
+                    padding: "0.75rem",
+                    border: "1px solid #e0e0e0",
+                    borderRadius: "4px",
+                    fontFamily: "inherit",
+                    fontSize: "1rem",
+                  }}
+                  placeholder="Subheading"
+                />
+              </div>
+
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: "1rem",
+                }}
+              >
+                <div>
+                  <label
+                    style={{
+                      display: "block",
+                      marginBottom: "0.5rem",
+                      fontWeight: "500",
+                    }}
+                  >
+                    CTA Button Text
+                  </label>
+                  <input
+                    type="text"
+                    value={slideForm.ctaButtonText}
+                    onChange={(e) =>
+                      setSlideForm((prev) => ({
+                        ...prev,
+                        ctaButtonText: e.target.value,
+                      }))
+                    }
+                    style={{
+                      width: "100%",
+                      padding: "0.75rem",
+                      border: "1px solid #e0e0e0",
+                      borderRadius: "4px",
+                    }}
+                    placeholder="Button text"
+                  />
+                </div>
+                <div>
+                  <label
+                    style={{
+                      display: "block",
+                      marginBottom: "0.5rem",
+                      fontWeight: "500",
+                    }}
+                  >
+                    CTA Button Link
+                  </label>
+                  <input
+                    type="text"
+                    value={slideForm.ctaButtonLink}
+                    onChange={(e) =>
+                      setSlideForm((prev) => ({
+                        ...prev,
+                        ctaButtonLink: e.target.value,
+                      }))
+                    }
+                    style={{
+                      width: "100%",
+                      padding: "0.75rem",
+                      border: "1px solid #e0e0e0",
+                      borderRadius: "4px",
+                    }}
+                    placeholder="/appointments"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label
+                  style={{
+                    display: "block",
+                    marginBottom: "0.5rem",
+                    fontWeight: "500",
+                  }}
+                >
+                  Background Image(s) *
+                </label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => handleMediaUpload(e, "image")}
+                  style={{
+                    width: "100%",
+                    padding: "0.75rem",
+                    border: "1px solid #e0e0e0",
+                    borderRadius: "4px",
+                    cursor: "pointer",
+                  }}
+                />
+                <p
+                  style={{
+                    fontSize: "0.75rem",
+                    color: "#666",
+                    marginTop: "0.5rem",
+                  }}
+                >
+                  Upload one or more background images for this slide
+                </p>
+
+                {layerForm.content && layerForm.type === "image" && (
+                  <div
+                    style={{
+                      marginTop: "1rem",
+                      padding: "1rem",
+                      backgroundColor: "white",
+                      borderRadius: "4px",
+                      border: "1px solid #e0e0e0",
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontSize: "0.875rem",
+                        fontWeight: "500",
+                        marginBottom: "0.75rem",
+                      }}
+                    >
+                      Preview:
+                    </div>
+                    <img
+                      src={layerForm.content}
+                      alt="Preview"
+                      style={{
+                        maxWidth: "100%",
+                        maxHeight: "150px",
+                        borderRadius: "4px",
+                        objectFit: "cover",
+                      }}
+                    />
+                    <div
+                      style={{
+                        marginTop: "0.75rem",
+                        display: "flex",
+                        gap: "0.5rem",
+                      }}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setLayerForm({
+                            type: "image",
+                            content: "",
+                            opacity: 1,
+                            order: 0,
+                          });
+                        }}
+                        style={{
+                          padding: "0.5rem 1rem",
+                          backgroundColor: "#f0f0f0",
+                          border: "1px solid #e0e0e0",
+                          borderRadius: "4px",
+                          cursor: "pointer",
+                          fontSize: "0.875rem",
+                        }}
+                      >
+                        Clear
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div style={{ display: "flex", gap: "1rem", paddingTop: "1rem" }}>
+                <button
+                  onClick={handleAddSlide}
+                  style={{
+                    flex: 1,
+                    padding: "0.75rem 1.5rem",
+                    backgroundColor: "#c9a227",
+                    color: "white",
+                    border: "none",
+                    borderRadius: "4px",
+                    cursor: "pointer",
+                    fontWeight: "500",
+                  }}
+                >
+                  <Plus
+                    size={16}
+                    style={{ display: "inline", marginRight: "0.5rem" }}
+                  />
+                  Create Slide
+                </button>
+                <button
+                  onClick={() => {
+                    setShowSlideForm(false);
+                    setError("");
+                  }}
+                  style={{
+                    flex: 1,
+                    padding: "0.75rem 1.5rem",
+                    backgroundColor: "#f0f0f0",
+                    border: "1px solid #e0e0e0",
+                    borderRadius: "4px",
+                    cursor: "pointer",
+                    fontWeight: "500",
+                  }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : selectedSlide ? (
           <>
             {/* Alert Messages */}
             {error && (
@@ -424,251 +746,269 @@ const HeroContentAdvanced = () => {
               </div>
             )}
 
-            {/* Slide Text Editor */}
+            {/* Tab Navigation */}
             <div
               style={{
-                backgroundColor: "#f9f9f9",
-                padding: "1.5rem",
-                borderRadius: "8px",
+                display: "flex",
+                gap: "1rem",
+                borderBottom: "2px solid #e0e0e0",
                 marginBottom: "2rem",
-                border: "1px solid #c9a227",
               }}
             >
-              <h3
+              <button
+                onClick={() => setActiveTab("images")}
                 style={{
-                  fontSize: "1.125rem",
-                  fontWeight: "600",
-                  marginBottom: "1rem",
+                  padding: "0.75rem 1.5rem",
+                  backgroundColor:
+                    activeTab === "images" ? "#c9a227" : "transparent",
+                  color: activeTab === "images" ? "white" : "#666",
+                  border: "none",
+                  borderBottom:
+                    activeTab === "images" ? "3px solid #c9a227" : "none",
+                  cursor: "pointer",
+                  fontWeight: activeTab === "images" ? "600" : "500",
+                  fontSize: "1rem",
                 }}
               >
-                Slide Text (Bottom Content)
-              </h3>
-
-              <div style={{ display: "grid", gap: "1rem" }}>
-                <div>
-                  <label
-                    style={{
-                      display: "block",
-                      marginBottom: "0.5rem",
-                      fontWeight: "500",
-                    }}
-                  >
-                    Heading *
-                  </label>
-                  <input
-                    type="text"
-                    value={slideForm.heading}
-                    onChange={(e) =>
-                      setSlideForm((prev) => ({
-                        ...prev,
-                        heading: e.target.value,
-                      }))
-                    }
-                    style={{
-                      width: "100%",
-                      padding: "0.75rem",
-                      border: "1px solid #e0e0e0",
-                      borderRadius: "4px",
-                      fontFamily: "inherit",
-                      fontSize: "1rem",
-                    }}
-                    placeholder="Main heading"
-                  />
-                </div>
-
-                <div>
-                  <label
-                    style={{
-                      display: "block",
-                      marginBottom: "0.5rem",
-                      fontWeight: "500",
-                    }}
-                  >
-                    Subheading
-                  </label>
-                  <input
-                    type="text"
-                    value={slideForm.subheading}
-                    onChange={(e) =>
-                      setSlideForm((prev) => ({
-                        ...prev,
-                        subheading: e.target.value,
-                      }))
-                    }
-                    style={{
-                      width: "100%",
-                      padding: "0.75rem",
-                      border: "1px solid #e0e0e0",
-                      borderRadius: "4px",
-                      fontFamily: "inherit",
-                      fontSize: "1rem",
-                    }}
-                    placeholder="Subheading"
-                  />
-                </div>
-
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "1fr 1fr",
-                    gap: "1rem",
-                  }}
-                >
-                  <div>
-                    <label
-                      style={{
-                        display: "block",
-                        marginBottom: "0.5rem",
-                        fontWeight: "500",
-                      }}
-                    >
-                      CTA Button Text
-                    </label>
-                    <input
-                      type="text"
-                      value={slideForm.ctaButtonText}
-                      onChange={(e) =>
-                        setSlideForm((prev) => ({
-                          ...prev,
-                          ctaButtonText: e.target.value,
-                        }))
-                      }
-                      style={{
-                        width: "100%",
-                        padding: "0.75rem",
-                        border: "1px solid #e0e0e0",
-                        borderRadius: "4px",
-                      }}
-                      placeholder="Button text"
-                    />
-                  </div>
-                  <div>
-                    <label
-                      style={{
-                        display: "block",
-                        marginBottom: "0.5rem",
-                        fontWeight: "500",
-                      }}
-                    >
-                      CTA Button Link
-                    </label>
-                    <input
-                      type="text"
-                      value={slideForm.ctaButtonLink}
-                      onChange={(e) =>
-                        setSlideForm((prev) => ({
-                          ...prev,
-                          ctaButtonLink: e.target.value,
-                        }))
-                      }
-                      style={{
-                        width: "100%",
-                        padding: "0.75rem",
-                        border: "1px solid #e0e0e0",
-                        borderRadius: "4px",
-                      }}
-                      placeholder="/appointments"
-                    />
-                  </div>
-                </div>
-
-                <button
-                  onClick={handleUpdateSlideText}
-                  style={{
-                    padding: "0.75rem 1.5rem",
-                    backgroundColor: "#c9a227",
-                    color: "white",
-                    border: "none",
-                    borderRadius: "4px",
-                    cursor: "pointer",
-                    fontWeight: "500",
-                  }}
-                >
-                  Save Text Changes
-                </button>
-
-                <button
-                  onClick={() => handleDeleteSlide(selectedSlideId)}
-                  style={{
-                    padding: "0.75rem 1.5rem",
-                    backgroundColor: "#fee2e2",
-                    color: "#991b1b",
-                    border: "none",
-                    borderRadius: "4px",
-                    cursor: "pointer",
-                    fontWeight: "500",
-                  }}
-                >
-                  <Trash2
-                    size={16}
-                    style={{ display: "inline", marginRight: "0.5rem" }}
-                  />
-                  Delete Slide
-                </button>
-              </div>
+                <ImageIcon
+                  size={18}
+                  style={{ display: "inline", marginRight: "0.5rem" }}
+                />
+                Background Image
+              </button>
+              <button
+                onClick={() => setActiveTab("text")}
+                style={{
+                  padding: "0.75rem 1.5rem",
+                  backgroundColor:
+                    activeTab === "text" ? "#c9a227" : "transparent",
+                  color: activeTab === "text" ? "white" : "#666",
+                  border: "none",
+                  borderBottom:
+                    activeTab === "text" ? "3px solid #c9a227" : "none",
+                  cursor: "pointer",
+                  fontWeight: activeTab === "text" ? "600" : "500",
+                  fontSize: "1rem",
+                }}
+              >
+                Slide Text
+              </button>
             </div>
 
-            {/* Layers Editor */}
-            <div
-              style={{
-                backgroundColor: "#f9f9f9",
-                padding: "1.5rem",
-                borderRadius: "8px",
-              }}
-            >
-              <h3
+            {/* Tab Content - Images/Backgrounds */}
+            {activeTab === "images" && (
+              <div
                 style={{
-                  fontSize: "1.125rem",
-                  fontWeight: "600",
-                  marginBottom: "1rem",
+                  backgroundColor: "#f9f9f9",
+                  padding: "1.5rem",
+                  borderRadius: "8px",
                 }}
               >
-                Background Layers ({sortedLayers.length})
-              </h3>
-
-              <button
-                onClick={() => {
-                  setShowLayerForm(!showLayerForm);
-                  setLayerForm({
-                    type: "image",
-                    content: "",
-                    opacity: 1,
-                    order: 0,
-                  });
-                }}
-                style={{
-                  width: "100%",
-                  padding: "0.75rem",
-                  backgroundColor: "#f0f0f0",
-                  border: "2px dashed #c9a227",
-                  borderRadius: "4px",
-                  marginBottom: "1.5rem",
-                  cursor: "pointer",
-                  fontWeight: "500",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: "0.5rem",
-                }}
-              >
-                <Plus size={16} /> Add Layer
-              </button>
-
-              {showLayerForm && (
-                <div
+                <h3
                   style={{
-                    backgroundColor: "white",
-                    padding: "1.5rem",
-                    borderRadius: "4px",
-                    border: "1px solid #c9a227",
-                    marginBottom: "1.5rem",
+                    fontSize: "1.125rem",
+                    fontWeight: "600",
+                    marginBottom: "1rem",
                   }}
                 >
-                  <h4 style={{ fontWeight: "600", marginBottom: "1rem" }}>
-                    New Layer
-                  </h4>
+                  Background Image
+                </h3>
 
-                  <div style={{ display: "grid", gap: "1rem" }}>
+                <div style={{ display: "grid", gap: "1.5rem" }}>
+                  <div>
+                    <label
+                      style={{
+                        display: "block",
+                        padding: "1.5rem",
+                        border: "2px dashed #c9a227",
+                        borderRadius: "4px",
+                        textAlign: "center",
+                        cursor: "pointer",
+                        backgroundColor: "#fafafa",
+                      }}
+                    >
+                      <ImageIcon
+                        size={32}
+                        style={{ margin: "0 auto 0.5rem", color: "#c9a227" }}
+                      />
+                      <div
+                        style={{ fontWeight: "500", marginBottom: "0.25rem" }}
+                      >
+                        Click to upload background image
+                      </div>
+                      <div style={{ fontSize: "0.875rem", color: "#666" }}>
+                        PNG, JPG, or GIF (Max 10MB)
+                      </div>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => handleMediaUpload(e, "image")}
+                        style={{ display: "none" }}
+                      />
+                    </label>
+                  </div>
+
+                  {selectedSlide?.layers?.[0]?.content && (
+                    <div
+                      style={{
+                        padding: "1rem",
+                        backgroundColor: "white",
+                        borderRadius: "4px",
+                        border: "1px solid #e0e0e0",
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontSize: "0.875rem",
+                          fontWeight: "500",
+                          marginBottom: "0.75rem",
+                          color: "#666",
+                        }}
+                      >
+                        Current Image:
+                      </div>
+                      <img
+                        src={selectedSlide.layers[0].content}
+                        alt="Slide background"
+                        style={{
+                          width: "100%",
+                          maxHeight: "300px",
+                          borderRadius: "4px",
+                          objectFit: "cover",
+                          marginBottom: "1rem",
+                        }}
+                      />
+                      <button
+                        onClick={async () => {
+                          try {
+                            const updatedSlides = slides.map((s) =>
+                              s.id === selectedSlideId
+                                ? {
+                                    ...s,
+                                    layers: (s.layers || []).filter(
+                                      (l) =>
+                                        l.id !== selectedSlide.layers[0].id,
+                                    ),
+                                  }
+                                : s,
+                            );
+                            await updateHeroContent({
+                              slides: updatedSlides,
+                            });
+                            setSlides(updatedSlides);
+                            setSuccess("Image removed");
+                            setTimeout(() => setSuccess(""), 3000);
+                          } catch (err) {
+                            setError("Failed to remove image");
+                          }
+                        }}
+                        style={{
+                          padding: "0.5rem 1rem",
+                          backgroundColor: "#fee2e2",
+                          color: "#991b1b",
+                          border: "1px solid #fecaca",
+                          borderRadius: "4px",
+                          cursor: "pointer",
+                          fontWeight: "500",
+                        }}
+                      >
+                        Remove Image
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Tab Content - Text/Content */}
+            {activeTab === "text" && (
+              <div
+                style={{
+                  backgroundColor: "#f9f9f9",
+                  padding: "1.5rem",
+                  borderRadius: "8px",
+                }}
+              >
+                <h3
+                  style={{
+                    fontSize: "1.125rem",
+                    fontWeight: "600",
+                    marginBottom: "1rem",
+                  }}
+                >
+                  Slide Text (Bottom Content)
+                </h3>
+
+                <div style={{ display: "grid", gap: "1rem" }}>
+                  <div>
+                    <label
+                      style={{
+                        display: "block",
+                        marginBottom: "0.5rem",
+                        fontWeight: "500",
+                      }}
+                    >
+                      Heading *
+                    </label>
+                    <input
+                      type="text"
+                      value={slideForm.heading}
+                      onChange={(e) =>
+                        setSlideForm((prev) => ({
+                          ...prev,
+                          heading: e.target.value,
+                        }))
+                      }
+                      style={{
+                        width: "100%",
+                        padding: "0.75rem",
+                        border: "1px solid #e0e0e0",
+                        borderRadius: "4px",
+                        fontFamily: "inherit",
+                        fontSize: "1rem",
+                      }}
+                      placeholder="Main heading"
+                    />
+                  </div>
+
+                  <div>
+                    <label
+                      style={{
+                        display: "block",
+                        marginBottom: "0.5rem",
+                        fontWeight: "500",
+                      }}
+                    >
+                      Subheading
+                    </label>
+                    <input
+                      type="text"
+                      value={slideForm.subheading}
+                      onChange={(e) =>
+                        setSlideForm((prev) => ({
+                          ...prev,
+                          subheading: e.target.value,
+                        }))
+                      }
+                      style={{
+                        width: "100%",
+                        padding: "0.75rem",
+                        border: "1px solid #e0e0e0",
+                        borderRadius: "4px",
+                        fontFamily: "inherit",
+                        fontSize: "1rem",
+                      }}
+                      placeholder="Subheading"
+                    />
+                  </div>
+
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "1fr 1fr",
+                      gap: "1rem",
+                    }}
+                  >
                     <div>
                       <label
                         style={{
@@ -677,14 +1017,15 @@ const HeroContentAdvanced = () => {
                           fontWeight: "500",
                         }}
                       >
-                        Layer Type *
+                        CTA Button Text
                       </label>
-                      <select
-                        value={layerForm.type}
+                      <input
+                        type="text"
+                        value={slideForm.ctaButtonText}
                         onChange={(e) =>
-                          setLayerForm((prev) => ({
+                          setSlideForm((prev) => ({
                             ...prev,
-                            type: e.target.value,
+                            ctaButtonText: e.target.value,
                           }))
                         }
                         style={{
@@ -693,128 +1034,9 @@ const HeroContentAdvanced = () => {
                           border: "1px solid #e0e0e0",
                           borderRadius: "4px",
                         }}
-                      >
-                        <option value="image">Background Image</option>
-                        <option value="video">Video</option>
-                        <option value="color">Solid Color</option>
-                      </select>
+                        placeholder="Button text"
+                      />
                     </div>
-
-                    {layerForm.type === "image" && (
-                      <div>
-                        <label
-                          style={{
-                            display: "block",
-                            padding: "1.5rem",
-                            border: "2px dashed #c9a227",
-                            borderRadius: "4px",
-                            textAlign: "center",
-                            cursor: "pointer",
-                            backgroundColor: "#fafafa",
-                          }}
-                        >
-                          <ImageIcon
-                            size={24}
-                            style={{ margin: "0 auto 0.5rem" }}
-                          />
-                          <div style={{ fontWeight: "500" }}>
-                            Click to upload image
-                          </div>
-                          <input
-                            type="file"
-                            accept="image/*"
-                            onChange={(e) => handleMediaUpload(e, "image")}
-                            style={{ display: "none" }}
-                          />
-                        </label>
-                        {layerForm.content && (
-                          <div style={{ marginTop: "0.75rem" }}>
-                            <img
-                              src={layerForm.content}
-                              alt="Preview"
-                              style={{
-                                maxWidth: "100%",
-                                maxHeight: "200px",
-                                borderRadius: "4px",
-                              }}
-                            />
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {layerForm.type === "video" && (
-                      <div>
-                        <label
-                          style={{
-                            display: "block",
-                            padding: "1.5rem",
-                            border: "2px dashed #c9a227",
-                            borderRadius: "4px",
-                            textAlign: "center",
-                            cursor: "pointer",
-                            backgroundColor: "#fafafa",
-                          }}
-                        >
-                          <VideoIcon
-                            size={24}
-                            style={{ margin: "0 auto 0.5rem" }}
-                          />
-                          <div style={{ fontWeight: "500" }}>
-                            Click to upload video
-                          </div>
-                          <input
-                            type="file"
-                            accept="video/*"
-                            onChange={(e) => handleMediaUpload(e, "video")}
-                            style={{ display: "none" }}
-                          />
-                        </label>
-                        {layerForm.content && (
-                          <div
-                            style={{
-                              marginTop: "0.75rem",
-                              fontSize: "0.875rem",
-                              color: "#666",
-                            }}
-                          >
-                            Video uploaded: {layerForm.content.split("/").pop()}
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {layerForm.type === "color" && (
-                      <div>
-                        <label
-                          style={{
-                            display: "block",
-                            marginBottom: "0.5rem",
-                            fontWeight: "500",
-                          }}
-                        >
-                          Color *
-                        </label>
-                        <input
-                          type="color"
-                          value={layerForm.content || "#000000"}
-                          onChange={(e) =>
-                            setLayerForm((prev) => ({
-                              ...prev,
-                              content: e.target.value,
-                            }))
-                          }
-                          style={{
-                            width: "100%",
-                            height: "50px",
-                            border: "1px solid #e0e0e0",
-                            borderRadius: "4px",
-                            cursor: "pointer",
-                          }}
-                        />
-                      </div>
-                    )}
-
                     <div>
                       <label
                         style={{
@@ -823,155 +1045,64 @@ const HeroContentAdvanced = () => {
                           fontWeight: "500",
                         }}
                       >
-                        Opacity: {layerForm.opacity}
+                        CTA Button Link
                       </label>
                       <input
-                        type="range"
-                        min="0"
-                        max="1"
-                        step="0.1"
-                        value={layerForm.opacity}
+                        type="text"
+                        value={slideForm.ctaButtonLink}
                         onChange={(e) =>
-                          setLayerForm((prev) => ({
+                          setSlideForm((prev) => ({
                             ...prev,
-                            opacity: parseFloat(e.target.value),
+                            ctaButtonLink: e.target.value,
                           }))
                         }
-                        style={{ width: "100%" }}
+                        style={{
+                          width: "100%",
+                          padding: "0.75rem",
+                          border: "1px solid #e0e0e0",
+                          borderRadius: "4px",
+                        }}
+                        placeholder="/appointments"
                       />
                     </div>
-
-                    <div style={{ display: "flex", gap: "0.75rem" }}>
-                      <button
-                        onClick={handleAddLayer}
-                        style={{
-                          flex: 1,
-                          padding: "0.75rem",
-                          backgroundColor: "#c9a227",
-                          color: "white",
-                          border: "none",
-                          borderRadius: "4px",
-                          cursor: "pointer",
-                          fontWeight: "500",
-                        }}
-                      >
-                        Add Layer
-                      </button>
-                      <button
-                        onClick={() => setShowLayerForm(false)}
-                        style={{
-                          flex: 1,
-                          padding: "0.75rem",
-                          backgroundColor: "#f0f0f0",
-                          border: "1px solid #e0e0e0",
-                          borderRadius: "4px",
-                          cursor: "pointer",
-                        }}
-                      >
-                        Cancel
-                      </button>
-                    </div>
                   </div>
-                </div>
-              )}
 
-              {/* Layers List */}
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "0.75rem",
-                }}
-              >
-                {sortedLayers.length === 0 ? (
-                  <div
+                  <button
+                    onClick={handleUpdateSlideText}
                     style={{
-                      textAlign: "center",
-                      color: "#999",
-                      padding: "2rem",
+                      padding: "0.75rem 1.5rem",
+                      backgroundColor: "#c9a227",
+                      color: "white",
+                      border: "none",
+                      borderRadius: "4px",
+                      cursor: "pointer",
+                      fontWeight: "500",
                     }}
                   >
-                    No layers yet. Click "Add Layer" to start.
-                  </div>
-                ) : (
-                  sortedLayers.map((layer, index) => (
-                    <div
-                      key={layer.id}
-                      style={{
-                        padding: "1rem",
-                        backgroundColor: "white",
-                        border: "1px solid #e0e0e0",
-                        borderRadius: "4px",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "1rem",
-                      }}
-                    >
-                      <div style={{ color: "#999", fontWeight: "600" }}>
-                        Layer {index + 1}
-                      </div>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontWeight: "500" }}>
-                          {layer.type === "image" && "📷 Image"}
-                          {layer.type === "video" && "🎬 Video"}
-                          {layer.type === "color" && "🎨 Color"}
-                        </div>
-                        <div style={{ fontSize: "0.875rem", color: "#666" }}>
-                          Opacity: {layer.opacity}
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => handleMoveLayer(layer.id, "up")}
-                        disabled={index === 0}
-                        style={{
-                          padding: "0.5rem",
-                          backgroundColor: index === 0 ? "#f0f0f0" : "white",
-                          border: "1px solid #e0e0e0",
-                          borderRadius: "4px",
-                          cursor: index === 0 ? "not-allowed" : "pointer",
-                          opacity: index === 0 ? 0.5 : 1,
-                        }}
-                      >
-                        <ChevronUp size={16} />
-                      </button>
-                      <button
-                        onClick={() => handleMoveLayer(layer.id, "down")}
-                        disabled={index === sortedLayers.length - 1}
-                        style={{
-                          padding: "0.5rem",
-                          backgroundColor:
-                            index === sortedLayers.length - 1
-                              ? "#f0f0f0"
-                              : "white",
-                          border: "1px solid #e0e0e0",
-                          borderRadius: "4px",
-                          cursor:
-                            index === sortedLayers.length - 1
-                              ? "not-allowed"
-                              : "pointer",
-                          opacity: index === sortedLayers.length - 1 ? 0.5 : 1,
-                        }}
-                      >
-                        <ChevronDown size={16} />
-                      </button>
-                      <button
-                        onClick={() => handleDeleteLayer(layer.id)}
-                        style={{
-                          padding: "0.5rem",
-                          backgroundColor: "#fee2e2",
-                          color: "#991b1b",
-                          border: "none",
-                          borderRadius: "4px",
-                          cursor: "pointer",
-                        }}
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  ))
-                )}
+                    Save Text Changes
+                  </button>
+
+                  <button
+                    onClick={() => handleDeleteSlide(selectedSlideId)}
+                    style={{
+                      padding: "0.75rem 1.5rem",
+                      backgroundColor: "#fee2e2",
+                      color: "#991b1b",
+                      border: "none",
+                      borderRadius: "4px",
+                      cursor: "pointer",
+                      fontWeight: "500",
+                    }}
+                  >
+                    <Trash2
+                      size={16}
+                      style={{ display: "inline", marginRight: "0.5rem" }}
+                    />
+                    Delete Slide
+                  </button>
+                </div>
               </div>
-            </div>
+            )}
           </>
         ) : (
           <div style={{ textAlign: "center", color: "#999", padding: "2rem" }}>

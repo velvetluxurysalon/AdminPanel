@@ -44,13 +44,24 @@ const HeroContent = () => {
       if (!file) return;
 
       const url = await uploadImage(file, `hero-${slideIndex}`);
-      if (editingSlideId) {
-        setEditingSlide((prev) => ({ ...prev, image: url }));
-      } else {
-        // For new slide
-        setEditingSlide((prev) => ({ ...prev, image: url }));
-      }
-      setSuccess("Image uploaded successfully");
+
+      // Create a proper HeroLayer object
+      const newLayer = {
+        id: `layer-${Date.now()}`,
+        type: "image",
+        content: url,
+        opacity: 1,
+        order: editingSlide.layers?.length || 0,
+      };
+
+      // Update editingSlide with both legacy format and new layer format
+      setEditingSlide((prev) => ({
+        ...prev,
+        image: url, // Keep for backward compatibility
+        layers: [...(prev.layers || []), newLayer],
+      }));
+
+      setSuccess("Hero image uploaded successfully");
       setTimeout(() => setSuccess(""), 3000);
     } catch (err) {
       setError("Failed to upload image");
@@ -64,7 +75,10 @@ const HeroContent = () => {
       id: `slide-${Date.now()}`,
       title: "",
       subtitle: "",
+      heading: "",
+      subheading: "",
       image: "",
+      layers: [],
       ctaButtonText: "",
       ctaButtonLink: "",
       order: slides.length,
@@ -73,7 +87,27 @@ const HeroContent = () => {
   };
 
   const handleEditSlide = (slide) => {
-    setEditingSlide({ ...slide });
+    // Ensure backward compatibility - convert to proper format
+    const slideToEdit = {
+      ...slide,
+      title: slide.title || slide.heading,
+      subtitle: slide.subtitle || slide.subheading,
+      layers:
+        slide.layers ||
+        (slide.image
+          ? [
+              {
+                id: `layer-${slide.id}`,
+                type: "image",
+                content: slide.image,
+                opacity: 1,
+                order: 0,
+              },
+            ]
+          : []),
+      image: slide.image, // Keep for display
+    };
+    setEditingSlide(slideToEdit);
     setEditingSlideId(slide.id);
   };
 
@@ -82,18 +116,40 @@ const HeroContent = () => {
       if (
         !editingSlide.title ||
         !editingSlide.subtitle ||
-        !editingSlide.image
+        (!editingSlide.image &&
+          (!editingSlide.layers || editingSlide.layers.length === 0))
       ) {
         setError("Please fill all required fields (title, subtitle, image)");
         return;
       }
 
+      // Prepare slide data with proper layer format
+      const slideToSave = {
+        ...editingSlide,
+        heading: editingSlide.title, // Use title as heading for new format
+        subheading: editingSlide.subtitle, // Use subtitle as subheading for new format
+        // Ensure layers array exists and is properly formatted
+        layers:
+          editingSlide.layers ||
+          (editingSlide.image
+            ? [
+                {
+                  id: `layer-${editingSlide.id}`,
+                  type: "image",
+                  content: editingSlide.image,
+                  opacity: 1,
+                  order: 0,
+                },
+              ]
+            : []),
+      };
+
       let updatedSlides;
       if (isAddingNew) {
-        updatedSlides = [...slides, editingSlide];
+        updatedSlides = [...slides, slideToSave];
       } else {
         updatedSlides = slides.map((s) =>
-          s.id === editingSlideId ? editingSlide : s,
+          s.id === editingSlideId ? slideToSave : s,
         );
       }
 
@@ -277,7 +333,7 @@ const HeroContent = () => {
                     color: "var(--admin-muted-foreground)",
                   }}
                 >
-                  Hero Image *
+                  Hero Image(s) *
                 </label>
                 <input
                   type="file"
@@ -286,30 +342,123 @@ const HeroContent = () => {
                   className="input"
                   style={{ cursor: "pointer" }}
                 />
-                {editingSlide.image && (
-                  <div style={{ marginTop: "1rem", position: "relative" }}>
-                    <img
-                      src={editingSlide.image}
-                      alt="Hero preview"
-                      style={{
-                        maxWidth: "300px",
-                        maxHeight: "200px",
-                        borderRadius: "var(--admin-radius-sm)",
-                        border: "1px solid var(--admin-border)",
-                      }}
-                    />
+                <p
+                  style={{
+                    fontSize: "0.75rem",
+                    color: "var(--admin-muted-foreground)",
+                    marginTop: "0.5rem",
+                  }}
+                >
+                  You can upload multiple images - each will be added as a layer
+                </p>
+
+                {/* Display all uploaded images */}
+                {editingSlide.layers && editingSlide.layers.length > 0 && (
+                  <div style={{ marginTop: "1rem" }}>
                     <p
                       style={{
-                        fontSize: "0.75rem",
-                        color: "var(--admin-muted-foreground)",
-                        marginTop: "0.5rem",
+                        fontSize: "0.875rem",
+                        fontWeight: "500",
+                        marginBottom: "0.5rem",
+                        color: "var(--admin-foreground)",
                       }}
                     >
-                      Image uploaded:{" "}
-                      {editingSlide.image.length > 50 ? "✓" : ""}
+                      Uploaded Images ({editingSlide.layers.length}):
                     </p>
+                    <div
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns:
+                          "repeat(auto-fill, minmax(150px, 1fr))",
+                        gap: "1rem",
+                      }}
+                    >
+                      {editingSlide.layers.map((layer, idx) => (
+                        <div
+                          key={layer.id}
+                          style={{
+                            position: "relative",
+                            borderRadius: "var(--admin-radius-sm)",
+                            overflow: "hidden",
+                            border: "1px solid var(--admin-border)",
+                          }}
+                        >
+                          {layer.type === "image" && (
+                            <div>
+                              <img
+                                src={layer.content}
+                                alt={`Hero layer ${idx + 1}`}
+                                style={{
+                                  width: "100%",
+                                  height: "120px",
+                                  objectFit: "cover",
+                                  borderRadius: "var(--admin-radius-sm)",
+                                }}
+                              />
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setEditingSlide({
+                                    ...editingSlide,
+                                    layers: editingSlide.layers.filter(
+                                      (l) => l.id !== layer.id,
+                                    ),
+                                  });
+                                }}
+                                style={{
+                                  position: "absolute",
+                                  top: "4px",
+                                  right: "4px",
+                                  background: "rgba(255, 0, 0, 0.8)",
+                                  color: "white",
+                                  border: "none",
+                                  borderRadius: "50%",
+                                  width: "24px",
+                                  height: "24px",
+                                  cursor: "pointer",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  fontSize: "16px",
+                                }}
+                                title="Remove image"
+                              >
+                                ×
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
+
+                {/* Fallback for legacy format */}
+                {editingSlide.image &&
+                  (!editingSlide.layers ||
+                    editingSlide.layers.length === 0) && (
+                    <div style={{ marginTop: "1rem", position: "relative" }}>
+                      <img
+                        src={editingSlide.image}
+                        alt="Hero preview"
+                        style={{
+                          maxWidth: "300px",
+                          maxHeight: "200px",
+                          borderRadius: "var(--admin-radius-sm)",
+                          border: "1px solid var(--admin-border)",
+                        }}
+                      />
+                      <p
+                        style={{
+                          fontSize: "0.75rem",
+                          color: "var(--admin-muted-foreground)",
+                          marginTop: "0.5rem",
+                        }}
+                      >
+                        Image uploaded: ✓
+                      </p>
+                    </div>
+                  )}
               </div>
 
               <div
@@ -465,7 +614,6 @@ const HeroContent = () => {
                       backgroundColor: "var(--admin-accent)",
                       transition: "all 0.2s",
                     }}
-                    draggable
                     onDragStart={(e) =>
                       e.dataTransfer.setData("text/plain", slide.id)
                     }
@@ -489,7 +637,7 @@ const HeroContent = () => {
                           marginBottom: "0.25rem",
                         }}
                       >
-                        Slide {idx + 1}: {slide.title}
+                        Slide {idx + 1}: {slide.title || slide.heading}
                       </p>
                       <p
                         style={{
@@ -497,15 +645,20 @@ const HeroContent = () => {
                           color: "var(--admin-muted-foreground)",
                         }}
                       >
-                        {slide.subtitle.substring(0, 50)}...
+                        {(slide.subtitle || slide.subheading || "").substring(
+                          0,
+                          50,
+                        )}
+                        ...
                       </p>
                     </div>
 
                     {/* Image Thumbnail */}
-                    {slide.image && (
+                    {(slide.image ||
+                      (slide.layers && slide.layers.length > 0)) && (
                       <img
-                        src={slide.image}
-                        alt={slide.title}
+                        src={slide.image || slide.layers?.[0]?.content}
+                        alt={slide.title || slide.heading}
                         style={{
                           maxWidth: "100%",
                           height: "80px",

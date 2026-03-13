@@ -511,9 +511,7 @@ const CheckoutModal = ({
           "",
         items: visit.items,
         totalAmount: totalAmount,
-        // For fully paid bills, always set paidAmount = totalAmount to avoid floating point issues
-        paidAmount:
-          amountPaidValue >= totalAmount ? totalAmount : amountPaidValue,
+        paidAmount: amountPaid,
         discountPercent: discountType === "percentage" ? discountValue : 0,
         discountType: discountType,
         discountAmount: finalDiscount,
