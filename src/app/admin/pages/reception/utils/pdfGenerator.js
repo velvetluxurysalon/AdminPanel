@@ -117,6 +117,10 @@ export const prepareInvoiceDataFromVisit = (visit, overrides = {}) => {
   const discountAmount = visit.discountAmount || overrides.discountAmount || 0;
   const afterDiscountTotal = subtotal - discountAmount;
 
+  // Calculate totalAmount first (needed for default paidAmount calculation)
+  const totalAmount =
+    visit.totalAmount || overrides.totalAmount || afterDiscountTotal || 0;
+
   return {
     invoiceId: visit.invoiceId || overrides.invoiceId || "",
     visitId: visit.id,
@@ -131,12 +135,15 @@ export const prepareInvoiceDataFromVisit = (visit, overrides = {}) => {
     items: visit.items || [],
     subtotal: subtotal,
     // CRITICAL: totalAmount should be after discount, not subtotal
-    totalAmount:
-      visit.totalAmount || overrides.totalAmount || afterDiscountTotal || 0,
+    totalAmount: totalAmount,
     discountAmount: discountAmount,
     discountType: visit.discountType || overrides.discountType || "none",
-    // paidAmount should not use totalAmount as fallback (could be subtotal)
-    paidAmount: visit.paidAmount || overrides.paidAmount || 0,
+    // For COMPLETED visits with no paidAmount set, assume fully paid (totalAmount)
+    // Otherwise use the actual paidAmount or 0 for unpaid visits
+    paidAmount:
+      visit.paidAmount ||
+      overrides.paidAmount ||
+      (visit.status === "COMPLETED" ? totalAmount : 0),
     paymentMode: visit.paymentMode || overrides.paymentMode || "cash",
     status:
       visit.status === "COMPLETED" ? "paid" : overrides.status || "unpaid",

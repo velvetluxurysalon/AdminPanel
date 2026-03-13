@@ -81,7 +81,12 @@ const BillOptionsModal = ({ selectedVisit, onClose }) => {
   const discountAmount = displayData.discountAmount || 0;
   const totalAmount =
     displayData.totalAmount || Math.max(0, subtotal - discountAmount);
-  const paidAmount = displayData.paidAmount || totalAmount;
+  // For completed visits: if paidAmount is 0/missing, assume fully paid
+  // For incomplete visits: use actual paidAmount
+  const paidAmount =
+    selectedVisit?.status === "COMPLETED" && (!displayData.paidAmount || displayData.paidAmount === 0)
+      ? totalAmount
+      : displayData.paidAmount || totalAmount;
   const balance = Math.max(0, totalAmount - paidAmount);
 
   const handlePrintBill = async () => {
