@@ -7,6 +7,14 @@ import {
   ServiceAnalytics,
   CustomerAnalytics,
 } from "../services/analyticsService";
+import {
+  collection,
+  query,
+  where,
+  getDocs,
+  Timestamp,
+} from "firebase/firestore";
+import { db } from "../../../firebaseConfig";
 
 /**
  * ADVANCED EXPORT UTILITIES
@@ -322,6 +330,48 @@ export const exportMonthlyReportPDF = (
 
   yPosition = (pdf as any).lastAutoTable.finalY + 10;
 
+  // Daily Breakdown
+  pdf.setFont("helvetica", "bold");
+  pdf.setFontSize(12);
+  pdf.text("DAILY BREAKDOWN", margin, yPosition);
+  yPosition += 8;
+
+  const dailyBreakdownData = [
+    ["Date", "Revenue", "Transactions", "Visits", "Avg. Per Transaction"],
+    ...dailyMetrics.map((day) => [
+      day.date.toLocaleDateString("en-IN"),
+      `Rs. ${day.totalRevenue.toFixed(2)}`,
+      day.totalTransactions.toString(),
+      day.completedVisits.toString(),
+      `Rs. ${(day.totalRevenue / (day.totalTransactions || 1)).toFixed(2)}`,
+    ]),
+  ];
+
+  autoTable(pdf, {
+    head: [dailyBreakdownData[0]],
+    body: dailyBreakdownData.slice(1),
+    startY: yPosition,
+    margin: margin,
+    theme: "grid",
+    headStyles: {
+      fillColor: [255, 152, 0],
+      textColor: [255, 255, 255],
+      fontStyle: "bold",
+      fontSize: 9,
+    },
+    bodyStyles: {
+      fontSize: 8,
+    },
+    alternateRowStyles: {
+      fillColor: [255, 248, 235],
+    },
+    didDrawPage: () => {
+      // Handle page overflow
+    },
+  });
+
+  yPosition = (pdf as any).lastAutoTable.finalY + 10;
+
   // Top Services
   pdf.setFont("helvetica", "bold");
   pdf.setFontSize(12);
@@ -447,7 +497,7 @@ export const exportDailyReportExcel = (
   XLSX.writeFile(workbook, fileName);
 };
 
-export const exportMonthlyReportExcel = (
+export const exportMonthlyReportExcel = async (
   dailyMetrics: DailyMetrics[],
   paymentSplit: PaymentModeSplit,
   serviceAnalytics: ServiceAnalytics[],
@@ -456,6 +506,19 @@ export const exportMonthlyReportExcel = (
   fileName: string = "monthly_report.xlsx",
 ) => {
   const workbook = XLSX.utils.book_new();
+
+  // Fetch all visits for the period
+  const visitsQuery = query(
+    collection(db, "visits"),
+    where("date", ">=", Timestamp.fromDate(config.dateRange.start)),
+    where("date", "<=", Timestamp.fromDate(config.dateRange.end)),
+  );
+
+  const visitsSnap = await getDocs(visitsQuery);
+  const visits = visitsSnap.docs.map((doc) => ({
+    id: doc.id,
+    ...doc.data(),
+  })) as any[];
 
   // Summary Sheet
   const totalRevenue = dailyMetrics.reduce((sum, m) => sum + m.totalRevenue, 0);
@@ -530,28 +593,28 @@ export const exportMonthlyReportExcel = (
       "Cash",
       `${paymentSplit.cash.amount.toFixed(2)}`,
       paymentSplit.cash.count,
-      `${(paymentSplit.cash.amount / paymentSplit.cash.count).toFixed(2)}`,
+      `${(paymentSplit.cash.count > 0 ? paymentSplit.cash.amount / paymentSplit.cash.count : 0).toFixed(2)}`,
       `${paymentSplit.cash.percentage.toFixed(1)}%`,
     ],
     [
       "Card",
       `${paymentSplit.card.amount.toFixed(2)}`,
       paymentSplit.card.count,
-      `${(paymentSplit.card.amount / paymentSplit.card.count).toFixed(2)}`,
+      `${(paymentSplit.card.count > 0 ? paymentSplit.card.amount / paymentSplit.card.count : 0).toFixed(2)}`,
       `${paymentSplit.card.percentage.toFixed(1)}%`,
     ],
     [
       "UPI",
       `${paymentSplit.upi.amount.toFixed(2)}`,
       paymentSplit.upi.count,
-      `${(paymentSplit.upi.amount / paymentSplit.upi.count).toFixed(2)}`,
+      `${(paymentSplit.upi.count > 0 ? paymentSplit.upi.amount / paymentSplit.upi.count : 0).toFixed(2)}`,
       `${paymentSplit.upi.percentage.toFixed(1)}%`,
     ],
     [
       "Wallet",
       `${paymentSplit.wallet.amount.toFixed(2)}`,
       paymentSplit.wallet.count,
-      `${(paymentSplit.wallet.amount / paymentSplit.wallet.count).toFixed(2)}`,
+      `${(paymentSplit.wallet.count > 0 ? paymentSplit.wallet.amount / paymentSplit.wallet.count : 0).toFixed(2)}`,
       `${paymentSplit.wallet.percentage.toFixed(1)}%`,
     ],
   ];
@@ -609,6 +672,79 @@ export const exportMonthlyReportExcel = (
 
   const customerSheet = XLSX.utils.aoa_to_sheet(customerData);
   XLSX.utils.book_append_sheet(workbook, customerSheet, "Customer Analytics");
+
+  // ALL VISITS - Detailed Sheet
+  const visitsData = [
+    [
+      "Invoice ID",
+      "Date",
+      "Time",
+      "Customer Name",
+      "Customer Phone",
+      "Services",
+      "Item Count",
+      "Subtotal (Rs.)",
+      "Discount (%)",
+      "Discount Amount (Rs.)",
+      "Total Amount (Rs.)",
+      "Paid Amount (Rs.)",
+      "Payment Mode",
+      "Status",
+      "Loyalty Points Earned",
+      "Points Used",
+    ],
+    ...visits.map((visit) => {
+      const visitDate = visit.date?.toDate?.() || new Date();
+      const timeStr = visitDate.toLocaleTimeString("en-IN", {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+      const serviceNames = (visit.items || [])
+        .map((item: any) => item.name)
+        .join(", ");
+
+      return [
+        visit.invoiceId || "N/A",
+        visitDate.toLocaleDateString("en-IN"),
+        timeStr,
+        visit.customer?.name || "N/A",
+        visit.customer?.phone || "N/A",
+        serviceNames || "N/A",
+        (visit.items || []).length,
+        `${visit.subtotal?.toFixed(2) || "0.00"}`,
+        `${visit.discountPercent || 0}`,
+        `${visit.discountAmount?.toFixed(2) || "0.00"}`,
+        `${visit.totalAmount?.toFixed(2) || "0.00"}`,
+        `${visit.paidAmount?.toFixed(2) || "0.00"}`,
+        visit.paymentMode || "N/A",
+        visit.status || "N/A",
+        visit.loyaltyPointsEarned || 0,
+        visit.pointsUsed || 0,
+      ];
+    }),
+  ];
+
+  const visitsSheet = XLSX.utils.aoa_to_sheet(visitsData);
+  // Auto-fit columns
+  visitsSheet["!cols"] = [
+    { wch: 12 },
+    { wch: 12 },
+    { wch: 10 },
+    { wch: 15 },
+    { wch: 13 },
+    { wch: 25 },
+    { wch: 10 },
+    { wch: 12 },
+    { wch: 10 },
+    { wch: 14 },
+    { wch: 14 },
+    { wch: 14 },
+    { wch: 12 },
+    { wch: 12 },
+    { wch: 16 },
+    { wch: 12 },
+  ];
+  XLSX.utils.book_append_sheet(workbook, visitsSheet, "All Visits");
 
   // Save
   XLSX.writeFile(workbook, fileName);

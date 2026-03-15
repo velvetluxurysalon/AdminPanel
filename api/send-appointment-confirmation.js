@@ -200,7 +200,7 @@ function generateConfirmationEmailHTML(appointmentData) {
       <p style="color: #333; font-size: 16px;">Dear ${appointmentData.customerName || "Valued Guest"},</p>
       
       <p style="color: #666; line-height: 1.6;">
-        Thank you for booking an appointment with us! We're thrilled to welcome you to Velvet Luxury Salon. Your appointment has been <strong>confirmed</strong> and is ready for your visit.
+        Thank you for booking an appointment with us! We're thrilled to welcome you to Velvet Premium Unisex Salon. Your appointment has been <strong>confirmed</strong> and is ready for your visit.
       </p>
 
       <!-- Confirmation Status -->
@@ -267,13 +267,13 @@ function generateConfirmationEmailHTML(appointmentData) {
 
       <p style="color: #999; font-size: 14px; margin-top: 20px;">
         With gratitude,<br>
-        <strong>Velvet Luxury Salon Team</strong>
+        <strong>Velvet Premium Unisex Salon Team</strong>
       </p>
     </div>
 
     <!-- Footer -->
     <div class="footer">
-      <p><strong>Velvet Luxury Salon</strong></p>
+      <p><strong>Velvet Premium Unisex Salon</strong></p>
       <p>📧 Velvetluxurysalon@gmail.com | 💬 +91 93456 78646</p>
       <p style="margin-top: 15px; font-size: 11px; color: #bbb;">
         This is an automated confirmation email. Please do not reply to this email.
@@ -376,9 +376,9 @@ export default async function handler(req, res) {
 
     // Prepare customer email
     const customerEmailOptions = {
-      from: `"Velvet Luxury Salon" <${EMAIL_USER}>`,
+      from: `"Velvet Premium Unisex Salon" <${EMAIL_USER}>`,
       to: appointmentData.customerEmail,
-      subject: "✨ Appointment Confirmed - Velvet Luxury Salon",
+      subject: "✨ Appointment Confirmed - Velvet Premium Unisex Salon",
       html: confirmationHTML,
     };
 
@@ -394,7 +394,7 @@ export default async function handler(req, res) {
 
     // Prepare admin notification email
     const adminEmailOptions = {
-      from: `"Velvet Luxury Salon" <${EMAIL_USER}>`,
+      from: `"Velvet Premium Unisex Salon" <${EMAIL_USER}>`,
       to: OWNER_EMAIL,
       subject: `📅 New Appointment Confirmed - ${appointmentData.customerName}`,
       html: `

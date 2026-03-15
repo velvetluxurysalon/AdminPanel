@@ -85,35 +85,7 @@ export const getDailyMetrics = async (date: Date): Promise<DailyMetrics> => {
   endOfDay.setHours(23, 59, 59, 999);
 
   try {
-    // Fetch all invoices for the day
-    const invoicesQuery = query(
-      collection(db, "invoices"),
-      where("invoiceDate", ">=", Timestamp.fromDate(startOfDay)),
-      where("invoiceDate", "<=", Timestamp.fromDate(endOfDay)),
-    );
-
-    const invoicesSnap = await getDocs(invoicesQuery);
-    const invoices = invoicesSnap.docs.map((doc) => doc.data() as any);
-
-    // Calculate revenue by payment mode
-    const paymentModes = {
-      cash: 0,
-      card: 0,
-      upi: 0,
-      wallet: 0,
-    };
-
-    let totalRevenue = 0;
-    invoices.forEach((inv: any) => {
-      const paidAmount = inv.paidAmount || 0;
-      totalRevenue += paidAmount;
-      const mode = inv.paymentMode?.toLowerCase() || "cash";
-      if (paymentModes[mode as keyof typeof paymentModes] !== undefined) {
-        paymentModes[mode as keyof typeof paymentModes] += paidAmount;
-      }
-    });
-
-    // Fetch visits for completion metrics
+    // Fetch all visits for the day from the visits collection
     const visitsQuery = query(
       collection(db, "visits"),
       where("date", ">=", Timestamp.fromDate(startOfDay)),
@@ -123,9 +95,30 @@ export const getDailyMetrics = async (date: Date): Promise<DailyMetrics> => {
     const visitsSnap = await getDocs(visitsQuery);
     const visits = visitsSnap.docs.map((doc) => doc.data() as any);
 
-    const completedVisits = visits.filter(
-      (v: any) => v.status === "COMPLETED",
-    ).length;
+    // Calculate revenue metrics from visits
+    const paymentModes = {
+      cash: 0,
+      card: 0,
+      upi: 0,
+      wallet: 0,
+    };
+
+    let totalRevenue = 0;
+    let completedVisitCount = 0;
+    const completedVisits = visits.filter((v: any) => v.status === "COMPLETED");
+
+    visits.forEach((visit: any) => {
+      const paidAmount = visit.paidAmount || visit.totalAmount || 0;
+      totalRevenue += paidAmount;
+
+      const mode = visit.paymentMode?.toLowerCase() || "cash";
+      if (paymentModes[mode as keyof typeof paymentModes] !== undefined) {
+        paymentModes[mode as keyof typeof paymentModes] += paidAmount;
+      }
+    });
+
+    completedVisitCount = completedVisits.length;
+
     const totalVisitDuration = visits.reduce(
       (sum: number, v: any) =>
         sum +
@@ -143,11 +136,10 @@ export const getDailyMetrics = async (date: Date): Promise<DailyMetrics> => {
       cardRevenue: paymentModes.card,
       upiRevenue: paymentModes.upi,
       walletRevenue: paymentModes.wallet,
-      totalTransactions: invoices.length,
-      totalInvoices: invoices.length,
-      completedVisits,
-      averageTransaction:
-        invoices.length > 0 ? totalRevenue / invoices.length : 0,
+      totalTransactions: visits.length,
+      totalInvoices: visits.length,
+      completedVisits: completedVisitCount,
+      averageTransaction: visits.length > 0 ? totalRevenue / visits.length : 0,
       averageVisitDuration:
         visits.length > 0 ? totalVisitDuration / visits.length : 0,
     };
@@ -179,14 +171,21 @@ export const getPaymentModeSplit = async (
   endDate: Date,
 ): Promise<PaymentModeSplit> => {
   try {
-    const invoicesQuery = query(
-      collection(db, "invoices"),
-      where("invoiceDate", ">=", Timestamp.fromDate(startDate)),
-      where("invoiceDate", "<=", Timestamp.fromDate(endDate)),
+    // Ensure proper time ranges for daily/monthly queries
+    const queryStartDate = new Date(startDate);
+    queryStartDate.setHours(0, 0, 0, 0);
+
+    const queryEndDate = new Date(endDate);
+    queryEndDate.setHours(23, 59, 59, 999);
+
+    const visitsQuery = query(
+      collection(db, "visits"),
+      where("date", ">=", Timestamp.fromDate(queryStartDate)),
+      where("date", "<=", Timestamp.fromDate(queryEndDate)),
     );
 
-    const invoicesSnap = await getDocs(invoicesQuery);
-    const invoices = invoicesSnap.docs.map((doc) => doc.data() as any);
+    const visitsSnap = await getDocs(visitsQuery);
+    const visits = visitsSnap.docs.map((doc) => doc.data() as any);
 
     const split: PaymentModeSplit = {
       cash: { amount: 0, count: 0, percentage: 0 },
@@ -196,12 +195,12 @@ export const getPaymentModeSplit = async (
       total: 0,
     };
 
-    invoices.forEach((inv: any) => {
-      const mode = (inv.paymentMode?.toLowerCase() || "cash") as keyof Omit<
+    visits.forEach((visit: any) => {
+      const mode = (visit.paymentMode?.toLowerCase() || "cash") as keyof Omit<
         PaymentModeSplit,
         "total"
       >;
-      const amount = inv.paidAmount || 0;
+      const amount = visit.paidAmount || visit.totalAmount || 0;
 
       if (split[mode]) {
         split[mode].amount += amount;
@@ -233,19 +232,19 @@ export const getServiceAnalytics = async (
   limit_count: number = 10,
 ): Promise<ServiceAnalytics[]> => {
   try {
-    const invoicesQuery = query(
-      collection(db, "invoices"),
-      where("invoiceDate", ">=", Timestamp.fromDate(startDate)),
-      where("invoiceDate", "<=", Timestamp.fromDate(endDate)),
+    const visitsQuery = query(
+      collection(db, "visits"),
+      where("date", ">=", Timestamp.fromDate(startDate)),
+      where("date", "<=", Timestamp.fromDate(endDate)),
     );
 
-    const invoicesSnap = await getDocs(invoicesQuery);
-    const invoices = invoicesSnap.docs.map((doc) => doc.data() as any);
+    const visitsSnap = await getDocs(visitsQuery);
+    const visits = visitsSnap.docs.map((doc) => doc.data() as any);
 
     const serviceMap = new Map<string, ServiceAnalytics>();
 
-    invoices.forEach((inv: any) => {
-      (inv.items || []).forEach((item: any) => {
+    visits.forEach((visit: any) => {
+      (visit.items || []).forEach((item: any) => {
         if (item.type === "service") {
           const key = item.serviceId || item.name;
           const current = serviceMap.get(key) || {
@@ -293,14 +292,14 @@ export const getCustomerAnalytics = async (
   endDate: Date,
 ): Promise<CustomerAnalytics> => {
   try {
-    const invoicesQuery = query(
-      collection(db, "invoices"),
-      where("invoiceDate", ">=", Timestamp.fromDate(startDate)),
-      where("invoiceDate", "<=", Timestamp.fromDate(endDate)),
+    const visitsQuery = query(
+      collection(db, "visits"),
+      where("date", ">=", Timestamp.fromDate(startDate)),
+      where("date", "<=", Timestamp.fromDate(endDate)),
     );
 
-    const invoicesSnap = await getDocs(invoicesQuery);
-    const invoices = invoicesSnap.docs.map((doc) => doc.data() as any);
+    const visitsSnap = await getDocs(visitsQuery);
+    const visits = visitsSnap.docs.map((doc) => doc.data() as any);
 
     // All customers collection
     const customersSnap = await getDocs(collection(db, "customers"));
@@ -311,18 +310,18 @@ export const getCustomerAnalytics = async (
       { name: string; spent: number; visits: number; lastVisit: Date }
     >();
 
-    invoices.forEach((inv: any) => {
-      const customerId = inv.customerId;
+    visits.forEach((visit: any) => {
+      const customerId = visit.customerId;
       const current = customerMap.get(customerId) || {
-        name: inv.customerName || "Unknown",
+        name: visit.customer?.name || "Unknown",
         spent: 0,
         visits: 0,
         lastVisit: new Date(startDate),
       };
 
-      current.spent += inv.paidAmount || 0;
+      current.spent += visit.paidAmount || visit.totalAmount || 0;
       current.visits++;
-      current.lastVisit = new Date(inv.invoiceDate?.toDate?.() || new Date());
+      current.lastVisit = new Date(visit.date?.toDate?.() || new Date());
 
       customerMap.set(customerId, current);
     });
@@ -424,14 +423,14 @@ export const getHourlyAnalytics = async (
   endOfDay.setHours(23, 59, 59, 999);
 
   try {
-    const invoicesQuery = query(
-      collection(db, "invoices"),
-      where("invoiceDate", ">=", Timestamp.fromDate(startOfDay)),
-      where("invoiceDate", "<=", Timestamp.fromDate(endOfDay)),
+    const visitsQuery = query(
+      collection(db, "visits"),
+      where("date", ">=", Timestamp.fromDate(startOfDay)),
+      where("date", "<=", Timestamp.fromDate(endOfDay)),
     );
 
-    const invoicesSnap = await getDocs(invoicesQuery);
-    const invoices = invoicesSnap.docs.map((doc) => doc.data() as any);
+    const visitsSnap = await getDocs(visitsQuery);
+    const visits = visitsSnap.docs.map((doc) => doc.data() as any);
 
     const hourlyData = new Map<number, TimeslotAnalytics>();
 
@@ -448,12 +447,12 @@ export const getHourlyAnalytics = async (
     }
 
     // Populate with actual data
-    invoices.forEach((inv: any) => {
-      const invoiceDate = inv.invoiceDate?.toDate?.() || new Date();
-      const hour = invoiceDate.getHours();
+    visits.forEach((visit: any) => {
+      const visitDate = visit.date?.toDate?.() || new Date();
+      const hour = visitDate.getHours();
       const data = hourlyData.get(hour)!;
 
-      data.revenue += inv.paidAmount || 0;
+      data.revenue += visit.paidAmount || visit.totalAmount || 0;
       data.transactionCount++;
     });
 

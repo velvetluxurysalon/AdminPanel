@@ -129,22 +129,16 @@ const Customers = () => {
   };
 
   const handleSaveEdit = async () => {
-    if (!editFormData.name || !editFormData.phone) {
-      alert("Please fill in all required fields");
+    if (!editFormData.name) {
+      alert("Please fill in the name field");
       return;
     }
 
     try {
       setLoading(true);
-      const normalizedPhone = editFormData.phone
-        .replace(/\D/g, "")
-        .startsWith("91")
-        ? "+" + editFormData.phone.replace(/\D/g, "")
-        : "+91" + editFormData.phone.replace(/\D/g, "");
-
+      // Phone number is read-only and cannot be changed, so we don't include it in the update
       await updateCustomer(editingCustomer, {
         name: editFormData.name,
-        phone: normalizedPhone,
         email: editFormData.email,
         dateOfBirth: editFormData.dateOfBirth,
         gender: editFormData.gender,
@@ -198,7 +192,7 @@ const Customers = () => {
             </head>
             <body>
                 <div class="header">
-                    <div class="title">VELVET LUXURY SALON</div>
+                    <div class="title">VELVET PREMIUM UNISEX SALON</div>
                     <div>Kalingarayanpalayam, Bhavani, Erode District, Tamil Nadu - 638301</div>
                     <div>Contact: 9667722611</div>
                 </div>
@@ -878,7 +872,7 @@ const Customers = () => {
                     fontWeight: "500",
                   }}
                 >
-                  Phone Number
+                  Phone Number (Read Only - Locked as Referral ID)
                 </label>
                 <div
                   style={{
@@ -886,6 +880,8 @@ const Customers = () => {
                     border: "1px solid var(--border)",
                     borderRadius: "var(--radius)",
                     overflow: "hidden",
+                    background: "var(--secondary)",
+                    opacity: 0.7,
                   }}
                 >
                   <span
@@ -903,12 +899,7 @@ const Customers = () => {
                   <input
                     type="tel"
                     value={editFormData.phone}
-                    onChange={(e) =>
-                      setEditFormData({
-                        ...editFormData,
-                        phone: e.target.value.replace(/\D/g, "").slice(0, 10),
-                      })
-                    }
+                    disabled
                     placeholder="9876543210"
                     maxLength="10"
                     style={{
@@ -916,9 +907,57 @@ const Customers = () => {
                       border: "none",
                       padding: "0.5rem 0.75rem",
                       outline: "none",
+                      background: "var(--secondary)",
+                      cursor: "not-allowed",
+                      color: "var(--foreground)",
                     }}
                   />
                 </div>
+                <p
+                  style={{
+                    fontSize: "0.75rem",
+                    color: "var(--muted-foreground)",
+                    marginTop: "0.25rem",
+                  }}
+                >
+                  Phone number cannot be changed as it serves as the customer's
+                  unique referral ID
+                </p>
+              </div>
+              <div style={{ marginBottom: "1rem" }}>
+                <label
+                  style={{
+                    display: "block",
+                    marginBottom: "0.5rem",
+                    fontSize: "0.875rem",
+                    fontWeight: "500",
+                  }}
+                >
+                  Referral ID (Phone Number - Read Only)
+                </label>
+                <input
+                  type="text"
+                  value={"+91" + editFormData.phone}
+                  disabled
+                  className="input"
+                  style={{
+                    width: "100%",
+                    background: "var(--secondary)",
+                    cursor: "not-allowed",
+                    opacity: 0.7,
+                  }}
+                  title="Referral ID is locked to phone number and cannot be changed"
+                />
+                <p
+                  style={{
+                    fontSize: "0.75rem",
+                    color: "var(--muted-foreground)",
+                    marginTop: "0.25rem",
+                  }}
+                >
+                  Referral ID is automatically set to customer's phone number
+                  and cannot be modified
+                </p>
               </div>
               <div style={{ marginBottom: "1rem" }}>
                 <label

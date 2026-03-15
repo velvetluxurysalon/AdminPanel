@@ -36,6 +36,7 @@ interface DashboardState {
   selectedMonth: number;
   selectedYear: number;
   dailyMetrics: any;
+  monthlyMetrics: any[];
   paymentSplit: any;
   serviceAnalytics: any[];
   customerAnalytics: any;
@@ -51,6 +52,7 @@ const LegendaryEnhancedDashboard: React.FC = () => {
     selectedMonth: new Date().getMonth() + 1,
     selectedYear: new Date().getFullYear(),
     dailyMetrics: null,
+    monthlyMetrics: [],
     paymentSplit: null,
     serviceAnalytics: [],
     customerAnalytics: null,
@@ -77,19 +79,28 @@ const LegendaryEnhancedDashboard: React.FC = () => {
           };
         }
 
-        const [daily, paymentModes, services, customers, staff, hourly] =
-          await Promise.all([
-            getDailyMetrics(dateRange.start),
-            getPaymentModeSplit(dateRange.start, dateRange.end),
-            getServiceAnalytics(dateRange.start, dateRange.end, 10),
-            getCustomerAnalytics(dateRange.start, dateRange.end),
-            getStaffPerformance(dateRange.start, dateRange.end),
-            getHourlyAnalytics(dateRange.start),
-          ]);
+        const [
+          daily,
+          monthly,
+          paymentModes,
+          services,
+          customers,
+          staff,
+          hourly,
+        ] = await Promise.all([
+          getDailyMetrics(dateRange.start),
+          getMonthlyMetrics(state.selectedYear, state.selectedMonth),
+          getPaymentModeSplit(dateRange.start, dateRange.end),
+          getServiceAnalytics(dateRange.start, dateRange.end, 10),
+          getCustomerAnalytics(dateRange.start, dateRange.end),
+          getStaffPerformance(dateRange.start, dateRange.end),
+          getHourlyAnalytics(dateRange.start),
+        ]);
 
         setState((prev) => ({
           ...prev,
           dailyMetrics: daily,
+          monthlyMetrics: monthly,
           paymentSplit: paymentModes,
           serviceAnalytics: services,
           customerAnalytics: customers,
@@ -114,20 +125,21 @@ const LegendaryEnhancedDashboard: React.FC = () => {
   const handleExportDailyPDF = async () => {
     try {
       setExporting(true);
-      if (!state.dailyMetrics || !state.paymentSplit) return;
+      if (!state.dailyMetrics) return;
 
-      const pdf = exportDailyReportPDF(state.dailyMetrics, state.paymentSplit, {
+      const dailyDate = state.dailyMetrics.date;
+      const dailyPaymentSplit = await getPaymentModeSplit(dailyDate, dailyDate);
+
+      const pdf = exportDailyReportPDF(state.dailyMetrics, dailyPaymentSplit, {
         title: "Daily Sales Report",
         dateRange: {
-          start: state.dailyMetrics.date,
-          end: state.dailyMetrics.date,
+          start: dailyDate,
+          end: dailyDate,
         },
         generatedAt: new Date(),
       });
 
-      pdf.save(
-        `daily_report_${state.dailyMetrics.date.toISOString().split("T")[0]}.pdf`,
-      );
+      pdf.save(`daily_report_${dailyDate.toISOString().split("T")[0]}.pdf`);
     } catch (error) {
       console.error("Error exporting PDF:", error);
       alert("Failed to export PDF");
@@ -150,10 +162,11 @@ const LegendaryEnhancedDashboard: React.FC = () => {
         state.selectedYear,
         state.selectedMonth,
       );
+      const monthlyPaymentSplit = await getPaymentModeSplit(startDate, endDate);
 
       const pdf = exportMonthlyReportPDF(
         monthlyData,
-        state.paymentSplit,
+        monthlyPaymentSplit,
         state.serviceAnalytics,
         {
           title: "Monthly Sales Report",
@@ -187,10 +200,11 @@ const LegendaryEnhancedDashboard: React.FC = () => {
         state.selectedYear,
         state.selectedMonth,
       );
+      const monthlyPaymentSplit = await getPaymentModeSplit(startDate, endDate);
 
-      exportMonthlyReportExcel(
+      await exportMonthlyReportExcel(
         monthlyData,
-        state.paymentSplit,
+        monthlyPaymentSplit,
         state.serviceAnalytics,
         state.customerAnalytics,
         {
@@ -257,22 +271,59 @@ const LegendaryEnhancedDashboard: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-white p-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">
+    <div
+      style={{ minHeight: "100vh", backgroundColor: "#fff", padding: "1rem" }}
+    >
+      <div style={{ maxWidth: "1400px", margin: "0 auto" }}>
+        {/* Header - Mobile Responsive */}
+        <div style={{ marginBottom: "1.5rem" }}>
+          <h1
+            style={{
+              fontSize: "clamp(1.5rem, 5vw, 2.5rem)",
+              fontWeight: 700,
+              color: "#111827",
+              marginBottom: "0.5rem",
+            }}
+          >
             ANALYTICS DASHBOARD
           </h1>
-          <p className="text-gray-600 text-lg">
-            Velvet Luxury Salon - Comprehensive Financial Intelligence
+          <p
+            style={{ color: "#4b5563", fontSize: "clamp(0.875rem, 2vw, 1rem)" }}
+          >
+            Velvet Premium Unisex Salon - Comprehensive Financial Intelligence
           </p>
         </div>
 
-        {/* Controls Bar */}
-        <div className="bg-gray-50 rounded-lg p-4 mb-6 shadow border border-gray-200">
-          <div className="flex flex-wrap gap-4 items-center justify-between">
-            <div className="flex gap-4">
+        {/* Controls Bar - Mobile Responsive */}
+        <div
+          style={{
+            backgroundColor: "#f9fafb",
+            borderRadius: "0.5rem",
+            padding: "1rem",
+            marginBottom: "1.5rem",
+            boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
+            border: "1px solid #e5e7eb",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: "0.75rem",
+              alignItems: "center",
+              justifyContent: "space-between",
+            }}
+          >
+            {/* Month/Year Selectors */}
+            <div
+              style={{
+                display: "flex",
+                gap: "0.5rem",
+                flexWrap: "wrap",
+                flex: 1,
+                minWidth: "200px",
+              }}
+            >
               <select
                 value={state.selectedMonth}
                 onChange={(e) =>
@@ -281,12 +332,22 @@ const LegendaryEnhancedDashboard: React.FC = () => {
                     selectedMonth: parseInt(e.target.value),
                   }))
                 }
-                className="bg-white text-gray-900 px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                style={{
+                  backgroundColor: "#ffffff",
+                  color: "#111827",
+                  padding: "0.5rem 0.75rem",
+                  borderRadius: "0.375rem",
+                  border: "1px solid #d1d5db",
+                  fontSize: "0.875rem",
+                  flex: 1,
+                  minWidth: "120px",
+                  cursor: "pointer",
+                }}
               >
                 {Array.from({ length: 12 }, (_, i) => (
                   <option key={i + 1} value={i + 1}>
                     {new Date(2024, i, 1).toLocaleDateString("en-IN", {
-                      month: "long",
+                      month: "short",
                     })}
                   </option>
                 ))}
@@ -300,7 +361,17 @@ const LegendaryEnhancedDashboard: React.FC = () => {
                     selectedYear: parseInt(e.target.value),
                   }))
                 }
-                className="bg-white text-gray-900 px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                style={{
+                  backgroundColor: "#ffffff",
+                  color: "#111827",
+                  padding: "0.5rem 0.75rem",
+                  borderRadius: "0.375rem",
+                  border: "1px solid #d1d5db",
+                  fontSize: "0.875rem",
+                  flex: 1,
+                  minWidth: "90px",
+                  cursor: "pointer",
+                }}
               >
                 {[2024, 2025, 2026].map((year) => (
                   <option key={year} value={year}>
@@ -310,32 +381,116 @@ const LegendaryEnhancedDashboard: React.FC = () => {
               </select>
             </div>
 
-            <div className="flex gap-2 flex-wrap">
+            {/* Export Buttons - Mobile Responsive */}
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(90px, 1fr))",
+                gap: "0.5rem",
+                width: "100%",
+              }}
+            >
               <button
                 onClick={handleExportDailyPDF}
                 disabled={exporting}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold disabled:opacity-50"
+                style={{
+                  backgroundColor: "#2563eb",
+                  color: "white",
+                  padding: "0.5rem",
+                  borderRadius: "0.375rem",
+                  fontWeight: 600,
+                  fontSize: "0.75rem",
+                  border: "none",
+                  cursor: exporting ? "not-allowed" : "pointer",
+                  opacity: exporting ? 0.5 : 1,
+                  transition: "all 150ms ease",
+                }}
+                onMouseEnter={(e) =>
+                  !exporting &&
+                  (e.currentTarget.style.backgroundColor = "#1d4ed8")
+                }
+                onMouseLeave={(e) =>
+                  !exporting &&
+                  (e.currentTarget.style.backgroundColor = "#2563eb")
+                }
               >
                 Daily PDF
               </button>
               <button
                 onClick={handleExportMonthlyPDF}
                 disabled={exporting}
-                className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg font-semibold disabled:opacity-50"
+                style={{
+                  backgroundColor: "#a855f7",
+                  color: "white",
+                  padding: "0.5rem",
+                  borderRadius: "0.375rem",
+                  fontWeight: 600,
+                  fontSize: "0.75rem",
+                  border: "none",
+                  cursor: exporting ? "not-allowed" : "pointer",
+                  opacity: exporting ? 0.5 : 1,
+                  transition: "all 150ms ease",
+                }}
+                onMouseEnter={(e) =>
+                  !exporting &&
+                  (e.currentTarget.style.backgroundColor = "#9333ea")
+                }
+                onMouseLeave={(e) =>
+                  !exporting &&
+                  (e.currentTarget.style.backgroundColor = "#a855f7")
+                }
               >
                 Monthly PDF
               </button>
               <button
                 onClick={handleExportMonthlyExcel}
                 disabled={exporting}
-                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-semibold disabled:opacity-50"
+                style={{
+                  backgroundColor: "#16a34a",
+                  color: "white",
+                  padding: "0.5rem",
+                  borderRadius: "0.375rem",
+                  fontWeight: 600,
+                  fontSize: "0.75rem",
+                  border: "none",
+                  cursor: exporting ? "not-allowed" : "pointer",
+                  opacity: exporting ? 0.5 : 1,
+                  transition: "all 150ms ease",
+                }}
+                onMouseEnter={(e) =>
+                  !exporting &&
+                  (e.currentTarget.style.backgroundColor = "#15803d")
+                }
+                onMouseLeave={(e) =>
+                  !exporting &&
+                  (e.currentTarget.style.backgroundColor = "#16a34a")
+                }
               >
                 Full Excel
               </button>
               <button
                 onClick={handleExportCashCheckouts}
                 disabled={exporting}
-                className="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-lg font-semibold disabled:opacity-50"
+                style={{
+                  backgroundColor: "#b45309",
+                  color: "white",
+                  padding: "0.5rem",
+                  borderRadius: "0.375rem",
+                  fontWeight: 600,
+                  fontSize: "0.75rem",
+                  border: "none",
+                  cursor: exporting ? "not-allowed" : "pointer",
+                  opacity: exporting ? 0.5 : 1,
+                  transition: "all 150ms ease",
+                }}
+                onMouseEnter={(e) =>
+                  !exporting &&
+                  (e.currentTarget.style.backgroundColor = "#92400e")
+                }
+                onMouseLeave={(e) =>
+                  !exporting &&
+                  (e.currentTarget.style.backgroundColor = "#b45309")
+                }
               >
                 Cash Report
               </button>
@@ -343,46 +498,82 @@ const LegendaryEnhancedDashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* KPI Cards - Row 1 */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        {/* KPI Cards - Fully Responsive */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
+            gap: "1rem",
+            marginBottom: "1.5rem",
+          }}
+        >
           <KPICard
-            title="Total Revenue"
+            title="Daily Revenue"
             value={`₹${state.dailyMetrics?.totalRevenue?.toFixed(2) || "0"}`}
-            subtitle="Today's Total"
+            subtitle="Today's Earnings"
             color="from-green-500 to-emerald-600"
             icon=""
           />
           <KPICard
-            title="Total Transactions"
-            value={state.dailyMetrics?.totalTransactions?.toString() || "0"}
-            subtitle="Invoices Created"
+            title="Daily Visits"
+            value={state.dailyMetrics?.completedVisits?.toString() || "0"}
+            subtitle="Completed Today"
             color="from-blue-500 to-cyan-600"
             icon=""
           />
           <KPICard
-            title="Completed Visits"
-            value={state.dailyMetrics?.completedVisits?.toString() || "0"}
-            subtitle="Finished Today"
+            title="Monthly Revenue"
+            value={`₹${(state.monthlyMetrics?.reduce((sum: number, day: any) => sum + (day.totalRevenue || 0), 0) || 0).toFixed(2)}`}
+            subtitle="Month's Earnings"
             color="from-purple-500 to-indigo-600"
             icon=""
           />
           <KPICard
-            title="Avg Transaction"
-            value={`₹${state.dailyMetrics?.averageTransaction?.toFixed(0) || "0"}`}
-            subtitle="Per Invoice"
+            title="Monthly Visits"
+            value={
+              state.monthlyMetrics
+                ?.reduce(
+                  (sum: number, day: any) => sum + (day.completedVisits || 0),
+                  0,
+                )
+                ?.toString() || "0"
+            }
+            subtitle="Month's Total"
             color="from-pink-500 to-rose-600"
             icon=""
           />
         </div>
 
-        {/* Payment Mode Breakdown - Row 2 */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+        {/* Payment Mode Breakdown - Responsive */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
+            gap: "1.5rem",
+            marginBottom: "1.5rem",
+          }}
+        >
           {/* Payment Pie Chart */}
-          <div className="bg-white rounded-lg p-6 shadow border border-gray-200 col-span-1">
-            <h3 className="text-gray-900 text-lg font-bold mb-4">
+          <div
+            style={{
+              backgroundColor: "#ffffff",
+              borderRadius: "0.5rem",
+              padding: "1rem",
+              boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
+              border: "1px solid #e5e7eb",
+            }}
+          >
+            <h3
+              style={{
+                color: "#111827",
+                fontSize: "1.125rem",
+                fontWeight: 700,
+                marginBottom: "1rem",
+              }}
+            >
               💳 Payment Mode Distribution
             </h3>
-            <ResponsiveContainer width="100%" height={300}>
+            <ResponsiveContainer width="100%" height={250}>
               <PieChart>
                 <Pie
                   data={[
@@ -409,7 +600,7 @@ const LegendaryEnhancedDashboard: React.FC = () => {
                   label={({ name, value }) =>
                     value > 0 ? `${name}: ₹${value.toFixed(0)}` : ""
                   }
-                  outerRadius={80}
+                  outerRadius={60}
                   fill="#8884d8"
                   dataKey="value"
                 >
@@ -433,8 +624,14 @@ const LegendaryEnhancedDashboard: React.FC = () => {
             </ResponsiveContainer>
           </div>
 
-          {/* Payment Breakdown Cards */}
-          <div className="col-span-2 grid grid-cols-2 gap-4">
+          {/* Payment Breakdown Cards - Responsive Grid */}
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
+              gap: "1rem",
+            }}
+          >
             <PaymentModeCard
               mode="Cash"
               amount={state.paymentSplit?.cash?.amount || 0}
@@ -470,24 +667,47 @@ const LegendaryEnhancedDashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Top Services & Hourly Analysis - Row 3 */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        {/* Top Services & Hourly Analysis - Responsive */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
+            gap: "1.5rem",
+            marginBottom: "1.5rem",
+          }}
+        >
           {/* Top Services */}
-          <div className="bg-white rounded-lg p-6 shadow border border-gray-200">
-            <h3 className="text-gray-900 text-lg font-bold mb-4">
+          <div
+            style={{
+              backgroundColor: "#ffffff",
+              borderRadius: "0.5rem",
+              padding: "1rem",
+              boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
+              border: "1px solid #e5e7eb",
+            }}
+          >
+            <h3
+              style={{
+                color: "#111827",
+                fontSize: "1.125rem",
+                fontWeight: 700,
+                marginBottom: "1rem",
+              }}
+            >
               ⭐ Top 5 Services by Revenue
             </h3>
-            <ResponsiveContainer width="100%" height={300}>
+            <ResponsiveContainer width="100%" height={250}>
               <BarChart data={state.serviceAnalytics?.slice(0, 5) || []}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                 <XAxis
                   dataKey="serviceName"
-                  tick={{ fill: "#6b7280", fontSize: 12 }}
-                  angle={-45}
+                  tick={{ fill: "#6b7280", fontSize: 10 }}
+                  angle={-35}
                   textAnchor="end"
-                  height={100}
+                  height={80}
+                  interval={0}
                 />
-                <YAxis tick={{ fill: "#6b7280" }} />
+                <YAxis tick={{ fill: "#6b7280", fontSize: 10 }} />
                 <Tooltip
                   formatter={(value) =>
                     `₹${typeof value === "number" ? value.toFixed(2) : value}`
@@ -496,6 +716,7 @@ const LegendaryEnhancedDashboard: React.FC = () => {
                     backgroundColor: "#ffffff",
                     border: "1px solid #e5e7eb",
                     borderRadius: "8px",
+                    fontSize: "0.875rem",
                   }}
                 />
                 <Bar

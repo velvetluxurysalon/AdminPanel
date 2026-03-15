@@ -187,6 +187,32 @@ const DashboardLayout = () => {
           (item) => !receptionistHiddenPaths.includes(item.path),
         );
 
+  // Mobile bottom nav items - prioritized based on role
+  const mobileNavItems =
+    userRole === "receptionist"
+      ? [
+          { path: "/admin", icon: ClipboardList, label: "Reception" },
+          {
+            path: "/admin/appointments",
+            icon: Calendar,
+            label: "Appointments",
+          },
+          { path: "/admin/customers", icon: Users, label: "Customers" },
+          { path: "/admin/services", icon: Scissors, label: "Services" },
+          { path: "/admin/loyalty", icon: Gift, label: "Loyalty" },
+        ]
+      : [
+          { path: "/admin", icon: ClipboardList, label: "Reception" },
+          {
+            path: "/admin/appointments",
+            icon: Calendar,
+            label: "Appointments",
+          },
+          { path: "/admin/dashboard", icon: BarChart3, label: "Analytics" },
+          { path: "/admin/customers", icon: Users, label: "Customers" },
+          { path: "/admin/staff", icon: UserCog, label: "Staff" },
+        ];
+
   // Close sidebar on route change
   useEffect(() => {
     setIsSidebarOpen(false);
@@ -445,11 +471,12 @@ const DashboardLayout = () => {
 
       {/* Mobile Bottom Navigation */}
       <nav className="mobile-bottom-nav">
-        {filteredNavItems.slice(0, 5).map((item) => (
+        {mobileNavItems.map((item) => (
           <Link
             key={item.path}
             to={item.path}
             className={`nav-item ${location.pathname === item.path ? "active" : ""}`}
+            title={item.label}
           >
             <item.icon size={20} />
             <span>{item.label}</span>
