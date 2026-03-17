@@ -255,7 +255,7 @@ const Customers = () => {
       </div>
 
       <div className="card">
-        <div className="card-content">
+        <div className="card-content table-wrapper">
           <table style={{ width: "100%" }}>
             <thead>
               <tr>
@@ -267,7 +267,7 @@ const Customers = () => {
                 <th style={{ textAlign: "right" }}>Total Spent</th>
                 <th>Loyalty Points</th>
                 <th>Last Visit</th>
-                <th style={{ width: "80px" }}>Actions</th>
+                <th style={{ width: "80px", textAlign: "center" }}>Actions</th>
               </tr>
             </thead>
             <tbody>

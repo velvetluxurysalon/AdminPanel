@@ -279,6 +279,8 @@
   overflow-y: auto;
   overflow-x: hidden;
   background: var(--admin-background-gradient);
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* Page Header */
@@ -942,6 +944,74 @@
   .admin-panel .modal-body {
     max-height: calc(80vh - 140px);
   }
+
+  /* Services: Convert card grid to mobile list on tablets */
+  .admin-panel .card-grid-lg {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 0.75rem !important;
+  }
+
+  .admin-panel .card-grid-lg > div {
+    display: flex !important;
+    flex-direction: row !important;
+    gap: 1rem !important;
+    padding: 1rem !important;
+    align-items: flex-start !important;
+    background-color: var(--admin-card-bg) !important;
+    border: 1px solid var(--admin-card-border) !important;
+    border-radius: var(--admin-radius-sm) !important;
+  }
+
+  .admin-panel .card-grid-lg > div > img {
+    width: 70px !important;
+    height: 70px !important;
+    min-width: 70px !important;
+    max-width: 70px !important;
+    border-radius: var(--admin-radius-sm) !important;
+    object-fit: cover !important;
+  }
+
+  .admin-panel .card-grid-lg > div > div:nth-of-type(1) {
+    flex: 1 !important;
+    min-width: 0 !important;
+  }
+
+  .admin-panel .card-grid-lg > div > div:nth-of-type(1) h4 {
+    margin: 0 0 0.25rem 0 !important;
+    font-size: 0.9rem !important;
+    font-weight: 600 !important;
+    color: var(--admin-foreground) !important;
+    display: block !important;
+    visibility: visible !important;
+  }
+
+  .admin-panel .card-grid-lg > div > div:nth-of-type(1) p {
+    display: -webkit-box !important;
+    -webkit-line-clamp: 1 !important;
+    line-clamp: 1 !important;
+    -webkit-box-orient: vertical !important;
+    margin: 0 !important;
+  }
+
+  .admin-panel .card-grid-lg > div > div:nth-of-type(2) {
+    width: 100% !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    padding: 0.75rem 0 !important;
+    border-top: 1px solid var(--admin-border-light) !important;
+    border-bottom: 1px solid var(--admin-border-light) !important;
+    margin: 0.5rem 0 !important;
+    gap: 1rem !important;
+  }
+
+  .admin-panel .card-grid-lg > div > div:nth-of-type(3) {
+    width: 100% !important;
+    display: flex !important;
+    gap: 0.5rem !important;
+    justify-content: flex-end !important;
+  }
 }
 
 /* ==================== TABLET VIEW (769px - 1024px) ==================== */
@@ -1020,6 +1090,7 @@
   .admin-panel .main-content {
     padding: 0.85rem;
     padding-bottom: 85px;
+    overflow-x: hidden;
   }
 
   .admin-panel .page-title {
@@ -1030,6 +1101,8 @@
   .admin-panel .card {
     border-radius: var(--admin-radius-sm);
     margin-bottom: 0.75rem;
+    width: 100%;
+    box-sizing: border-box;
   }
 
   .admin-panel .card-header {
@@ -1047,6 +1120,8 @@
   .admin-panel .table-container {
     border-radius: var(--admin-radius-sm);
     margin-bottom: 1rem;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
   .admin-panel .section-container {
@@ -1079,6 +1154,9 @@
 
   .admin-panel .btn-group {
     width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
   }
 
   .admin-panel .label {
@@ -1099,6 +1177,8 @@
   /* Table responsiveness */
   .admin-panel table {
     font-size: 0.8rem;
+    width: 100%;
+    table-layout: auto;
   }
 
   .admin-panel th {
@@ -1108,6 +1188,50 @@
 
   .admin-panel td {
     padding: 0.65rem 0.5rem;
+  }
+
+  /* Icon sizing */
+  .admin-panel .icon-sm {
+    width: 18px;
+    height: 18px;
+  }
+
+  /* Two-column layout stack */
+  .admin-panel .grid > div:nth-child(2) {
+    margin-top: 1rem;
+  }
+
+  /* Services Mobile List Optimization */
+  .admin-panel .card-grid-lg > div {
+    gap: 0.75rem !important;
+    padding: 0.75rem !important;
+  }
+
+  .admin-panel .card-grid-lg > div > img {
+    width: 60px !important;
+    height: 60px !important;
+    min-width: 60px !important;
+    max-width: 60px !important;
+  }
+
+  .admin-panel .card-grid-lg > div > div:nth-of-type(1) h4 {
+    font-size: 0.85rem !important;
+  }
+
+  .admin-panel .card-grid-lg > div > div:nth-of-type(1) p {
+    font-size: 0.75rem !important;
+    -webkit-line-clamp: 1 !important;
+    line-clamp: 1 !important;
+  }
+
+  .admin-panel .card-grid-lg > div > div:nth-of-type(2) {
+    padding: 0.5rem 0 !important;
+    margin: 0.5rem 0 !important;
+    gap: 0.75rem !important;
+  }
+
+  .admin-panel .card-grid-lg > div > div:nth-of-type(3) {
+    gap: 0.5rem !important;
   }
 }
 
@@ -1454,6 +1578,96 @@
     padding-top: 0.5rem;
     padding-bottom: 0.5rem;
   }
+
+  /* Services Mobile List Optimization for Small Phones */
+  .admin-panel .card-grid-lg {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 0.5rem !important;
+    padding: 0.5rem !important;
+  }
+
+  .admin-panel .card-grid-lg > div {
+    display: flex !important;
+    flex-direction: row !important;
+    gap: 0.75rem !important;
+    padding: 0.75rem !important;
+    background: var(--admin-card-bg) !important;
+    border: 1px solid var(--admin-card-border) !important;
+    border-radius: var(--admin-radius-sm) !important;
+    align-items: flex-start !important;
+  }
+
+  .admin-panel .card-grid-lg > div > img {
+    width: 60px !important;
+    height: 60px !important;
+    min-width: 60px !important;
+    max-width: 60px !important;
+    border-radius: var(--admin-radius-sm) !important;
+    object-fit: cover !important;
+  }
+
+  .admin-panel .card-grid-lg > div > div:nth-of-type(1) {
+    flex: 1 !important;
+    min-width: 0 !important;
+  }
+
+  .admin-panel .card-grid-lg > div > div:nth-of-type(1) h4 {
+    font-size: 0.8rem !important;
+    font-weight: 600 !important;
+    margin: 0 0 0.25rem 0 !important;
+    display: block !important;
+    color: var(--admin-foreground) !important;
+  }
+
+  .admin-panel .card-grid-lg > div > div:nth-of-type(1) p {
+    font-size: 0.7rem !important;
+    margin: 0 !important;
+    -webkit-line-clamp: 1 !important;
+    line-clamp: 1 !important;
+    -webkit-box-orient: vertical !important;
+    display: -webkit-box !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+
+  .admin-panel .card-grid-lg > div > div:nth-of-type(2) {
+    display: flex !important;
+    justify-content: space-between !important;
+    width: 100% !important;
+    padding: 0.5rem 0 !important;
+    border-top: 1px solid var(--admin-border-light) !important;
+    border-bottom: 1px solid var(--admin-border-light) !important;
+    margin: 0.5rem 0 !important;
+    gap: 0.5rem !important;
+    font-size: 0.7rem !important;
+  }
+
+  .admin-panel .card-grid-lg > div > div:nth-of-type(2) > div {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0.2rem !important;
+  }
+
+  .admin-panel .card-grid-lg > div > div:nth-of-type(2) span {
+    font-size: 0.65rem !important;
+  }
+
+  .admin-panel .card-grid-lg > div > div:nth-of-type(3) {
+    display: flex !important;
+    gap: 0.25rem !important;
+    width: 100% !important;
+    justify-content: flex-end !important;
+  }
+
+  .admin-panel .card-grid-lg > div > div:nth-of-type(3) button {
+    width: 28px !important;
+    height: 28px !important;
+    padding: 0.25rem !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
 }
 
 /* Utility Classes */
@@ -1491,11 +1705,259 @@
   color: var(--admin-muted-foreground);
 }
 
-/* Responsive Grid */
+/* ==================== RESPONSIVE UTILITIES ==================== */
+/* Responsive Grid Layouts */
 .admin-panel .grid-cols-1 {
   display: grid;
   grid-template-columns: 1fr;
   gap: 1rem;
+}
+
+.admin-panel .grid-cols-2 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+
+.admin-panel .grid-cols-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+
+.admin-panel .grid-auto {
+  display: grid;
+  grid-auto-flow: row;
+  gap: 1rem;
+}
+
+/* Responsive Grid - Stack on mobile */
+@media (max-width: 768px) {
+  .admin-panel .grid-cols-2 {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-panel .grid-cols-3 {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-panel .grid-auto {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Responsive Flex */
+.admin-panel .flex-between-col {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1.5rem;
+}
+
+/* Two-column layout that stacks on mobile */
+.admin-panel .layout-two-col {
+  display: grid;
+  grid-template-columns: 1fr 350px;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.admin-panel .layout-two-col-lg {
+  grid-template-columns: 1fr 450px;
+}
+
+.admin-panel .layout-three-col {
+  display: grid;
+  grid-template-columns: 1fr 300px 250px;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+/* Responsive card grid */
+.admin-panel .card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.admin-panel .card-grid-lg {
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+}
+
+.admin-panel .card-grid-sm {
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+}
+
+/* Responsive welcome header */
+.admin-panel .welcome-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 2rem;
+  flex-wrap: wrap;
+}
+
+.admin-panel .welcome-content {
+  flex: 1;
+  min-width: 200px;
+}
+
+.admin-panel .welcome-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+/* Responsive table wrapper */
+.admin-panel .table-wrapper {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border-radius: var(--admin-radius);
+}
+
+.admin-panel .table-scroll-indicator::after {
+  content: "← Swipe to scroll →";
+  display: none;
+  text-align: center;
+  padding: 0.5rem;
+  background: var(--admin-muted);
+  color: var(--admin-muted-foreground);
+  font-size: 0.75rem;
+  border-radius: 0 0 var(--admin-radius) var(--admin-radius);
+}
+
+/* Hide columns on mobile */
+.admin-panel .hide-xs {
+  display: none !important;
+}
+
+.admin-panel .show-xs {
+  display: inline-block !important;
+}
+
+/* Responsive table cells */
+.admin-panel .table-cell-small {
+  font-size: 0.8rem;
+  padding: 0.5rem !important;
+}
+
+.admin-panel .table-truncate {
+  max-width: 150px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Responsive spacing */
+.admin-panel .px-responsive {
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+}
+
+.admin-panel .py-responsive {
+  padding-top: 1.5rem;
+  padding-bottom: 1.5rem;
+}
+
+/* Mobile-first responsive utilities */
+@media (max-width: 768px) {
+  /* Stack two-column layouts */
+  .admin-panel .layout-two-col,
+  .admin-panel .layout-two-col-lg {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-panel .layout-three-col {
+    grid-template-columns: 1fr;
+  }
+
+  /* Reduce card grid minimums */
+  .admin-panel .card-grid {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  }
+
+  .admin-panel .card-grid-lg {
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  }
+
+  .admin-panel .card-grid-sm {
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  }
+
+  /* Responsive welcome header */
+  .admin-panel .welcome-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .admin-panel .welcome-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  /* Show scroll indicator on mobile */
+  .admin-panel .table-scroll-indicator::after {
+    display: block;
+  }
+
+  /* Show hidden content classes */
+  .admin-panel .hide-xs {
+    display: auto !important;
+  }
+
+  .admin-panel .show-xs {
+    display: inline-block !important;
+  }
+
+  /* Responsive spacing */
+  .admin-panel .px-responsive {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+
+  .admin-panel .py-responsive {
+    padding-top: 1rem;
+    padding-bottom: 1rem;
+  }
+
+  .admin-panel .flex-between-col {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .admin-panel .px-responsive {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+
+  .admin-panel .py-responsive {
+    padding-top: 0.75rem;
+    padding-bottom: 0.75rem;
+  }
+
+  .admin-panel .card-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-panel .card-grid-lg,
+  .admin-panel .card-grid-sm {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (min-width: 769px) {
+  .admin-panel .hide-xs {
+    display: auto !important;
+  }
+
+  .admin-panel .show-xs {
+    display: none !important;
+  }
 }
 
 .admin-panel .grid-cols-2 {
@@ -1736,6 +2198,7 @@
   text-overflow: ellipsis;
   display: -webkit-box;
   -webkit-line-clamp: 2;
+  line-clamp: 2;
   -webkit-box-orient: vertical;
 }
 
@@ -1787,6 +2250,122 @@
 
 .admin-panel .table-wrapper table {
   min-width: 600px;
+}
+
+/* Services List View for Mobile */
+.admin-panel .services-list-mobile {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+}
+
+.admin-panel .service-list-item {
+  display: flex;
+  gap: 1rem;
+  padding: 1rem;
+  background: var(--admin-card-bg);
+  border: 1px solid var(--admin-card-border);
+  border-radius: var(--admin-radius-sm);
+  align-items: flex-start;
+  transition: all var(--admin-transition-base);
+}
+
+.admin-panel .service-list-item:hover {
+  box-shadow: var(--admin-card-shadow-hover);
+  transform: translateY(-1px);
+}
+
+.admin-panel .service-list-item-image {
+  width: 80px;
+  height: 80px;
+  min-width: 80px;
+  border-radius: var(--admin-radius-sm);
+  object-fit: cover;
+  display: none;
+}
+
+.admin-panel .service-list-item-content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.admin-panel .service-list-item-name {
+  font-weight: 600;
+  font-size: 0.95rem;
+  margin: 0;
+  color: var(--admin-foreground);
+  line-height: 1.2;
+}
+
+.admin-panel .service-list-item-description {
+  font-size: 0.8rem;
+  color: var(--admin-muted-foreground);
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.admin-panel .service-list-item-meta {
+  display: flex;
+  gap: 1.5rem;
+  font-size: 0.8rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--admin-border-light);
+}
+
+.admin-panel .service-list-item-meta-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.admin-panel .service-list-item-meta-label {
+  color: var(--admin-muted-foreground);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  font-weight: 500;
+}
+
+.admin-panel .service-list-item-meta-value {
+  font-weight: 600;
+  color: var(--admin-foreground);
+}
+
+.admin-panel .service-list-item-meta-price {
+  color: var(--admin-primary);
+  font-size: 0.9rem;
+}
+
+.admin-panel .service-list-item-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-shrink: 0;
+  margin-top: 0.5rem;
+}
+
+.admin-panel .service-list-item-actions button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  opacity: 0.6;
+  padding: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--admin-transition-fast);
+  border-radius: var(--admin-radius-sm);
+}
+
+.admin-panel .service-list-item-actions button:hover {
+  opacity: 1;
+  background: var(--admin-secondary);
 }
 
 /* Touch-friendly targets */
@@ -1850,6 +2429,284 @@
   line-height: 1.5;
 }
 
+/* ==================== PAYROLL PAGE RESPONSIVE ==================== */
+@media (max-width: 1280px) {
+  /* Payroll detail view: Stack sidebar and content */
+  .admin-panel .layout-two-col {
+    grid-template-columns: 1fr !important;
+  }
+
+  .admin-panel .salary-metrics-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 768px) {
+  /* Payroll view mode buttons: Wrap on mobile */
+  .admin-panel .payroll-controls {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 0.5rem !important;
+  }
+
+  .admin-panel .payroll-controls button {
+    flex: 1;
+    min-width: 120px;
+    padding: 0.4rem 0.5rem !important;
+    font-size: 0.75rem !important;
+  }
+
+  .admin-panel .payroll-controls button svg {
+    display: none;
+  }
+
+  .admin-panel .payroll-controls .month-selector {
+    width: 100% !important;
+    margin-left: 0 !important;
+  }
+
+  /* Payroll: Main metrics grid - stack to 2 columns */
+  .admin-panel .salary-metrics-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  /* Payroll: Reduce metric card padding and text */
+  .admin-panel .salary-metrics-grid .card {
+    margin-bottom: 0.75rem !important;
+  }
+
+  .admin-panel .salary-metrics-grid .card-content {
+    padding: 0.75rem !important;
+  }
+
+  /* Override detail grids to stack on tablet */
+  .admin-panel .salary-metrics-grid .card-content > div {
+    grid-template-columns: 1fr 1fr !important;
+  }
+
+  /* Net pay card - reduce font size on tablet */
+  .admin-panel .net-pay-card {
+    margin: 1rem 0 !important;
+  }
+
+  .admin-panel .net-pay-card .card-content {
+    padding: 1rem !important;
+  }
+
+  .admin-panel .net-pay-card .card-content > div:nth-child(2) {
+    font-size: 2rem !important;
+  }
+
+  /* Payroll breakdown table */
+  .admin-panel .salary-breakdown-table {
+    font-size: 0.75rem;
+  }
+
+  .admin-panel .salary-breakdown-table td,
+  .admin-panel .salary-breakdown-table th {
+    padding: 0.5rem 0.35rem !important;
+  }
+
+  .admin-panel .salary-breakdown-table td:first-child {
+    min-width: 120px;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Payroll: Main metrics grid - stack to 1 column on mobile */
+  .admin-panel .salary-metrics-grid {
+    grid-template-columns: 1fr !important;
+    gap: 0.75rem !important;
+  }
+
+  .admin-panel .salary-metrics-grid .card {
+    margin-bottom: 0 !important;
+  }
+
+  .admin-panel .salary-metrics-grid .card-content {
+    padding: 0.75rem !important;
+  }
+
+  /* Stack all detail grids to 1 column on mobile */
+  .admin-panel .salary-metrics-grid .card-content > div {
+    grid-template-columns: 1fr !important;
+    gap: 0.5rem !important;
+  }
+
+  /* Metric numbers text sizes on mobile */
+  .admin-panel
+    .salary-metrics-grid
+    .card-content
+    > div:first-child
+    > div:first-child
+    > div:first-child {
+    font-size: 0.75rem !important;
+  }
+
+  .admin-panel
+    .salary-metrics-grid
+    .card-content
+    > div:first-child
+    > div:first-child
+    > div:last-child {
+    font-size: 1.5rem !important;
+  }
+
+  /* Net pay card - mobile optimizations */
+  .admin-panel .net-pay-card .card-content {
+    padding: 0.75rem !important;
+    text-align: center;
+  }
+
+  .admin-panel .net-pay-card .card-content > div:nth-child(1) {
+    font-size: 0.75rem !important;
+  }
+
+  .admin-panel .net-pay-card .card-content > div:nth-child(2) {
+    font-size: 1.75rem !important;
+    font-weight: 700 !important;
+    margin-bottom: 0.5rem !important;
+  }
+
+  .admin-panel .net-pay-card .card-content > div:nth-child(3) {
+    font-size: 0.7rem !important;
+  }
+
+  /* Payroll controls: Full width stack on mobile */
+  .admin-panel .payroll-controls {
+    flex-direction: column !important;
+    gap: 0.5rem !important;
+  }
+
+  .admin-panel .payroll-controls button {
+    width: 100% !important;
+    font-size: 0.7rem !important;
+  }
+
+  .admin-panel .payroll-controls .month-selector {
+    width: 100% !important;
+    font-size: 0.85rem !important;
+    padding: 0.5rem 0.75rem !important;
+  }
+
+  /* Payroll overview table: Mobile optimizations */
+  .admin-panel .payroll-overview-table th:nth-child(n + 4):nth-child(-n + 8),
+  .admin-panel .payroll-overview-table td:nth-child(n + 4):nth-child(-n + 8) {
+    display: none;
+  }
+
+  .admin-panel .payroll-overview-table {
+    font-size: 0.7rem;
+  }
+
+  .admin-panel .payroll-overview-table td,
+  .admin-panel .payroll-overview-table th {
+    padding: 0.4rem 0.2rem !important;
+  }
+
+  /* Salary breakdown table - mobile optimizations */
+  .admin-panel .salary-breakdown-table {
+    font-size: 0.7rem !important;
+  }
+
+  .admin-panel .salary-breakdown-table td,
+  .admin-panel .salary-breakdown-table th {
+    padding: 0.4rem 0.3rem !important;
+    word-break: break-word;
+  }
+
+  .admin-panel .salary-breakdown-table td:first-child {
+    min-width: 100px;
+  }
+}
+
+/* ==================== STAFF PAGE RESPONSIVE ==================== */
+@media (max-width: 1024px) {
+  /* Staff page: Stack sidebar below table on tablets */
+  .admin-panel .layout-two-col {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 768px) {
+  /* Staff page table responsive */
+  .admin-panel table {
+    font-size: 0.75rem;
+  }
+
+  .admin-panel th {
+    padding: 0.5rem 0.25rem !important;
+    font-size: 0.65rem !important;
+  }
+
+  .admin-panel td {
+    padding: 0.5rem 0.25rem !important;
+  }
+
+  .admin-panel td > img {
+    width: 40px !important;
+    height: 40px !important;
+  }
+
+  .admin-panel td span {
+    padding: 0.2rem 0.5rem !important;
+    font-size: 0.65rem !important;
+  }
+
+  /* Hide Experience and Salary columns on small tablets */
+  .admin-panel table th:nth-child(4),
+  .admin-panel table td:nth-child(4),
+  .admin-panel table th:nth-child(5),
+  .admin-panel table td:nth-child(5) {
+    display: none;
+  }
+
+  /* Make action buttons smaller */
+  .admin-panel table button svg {
+    width: 16px !important;
+    height: 16px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Staff page: Hide more columns on mobile */
+  .admin-panel table th:nth-child(4),
+  .admin-panel table td:nth-child(4),
+  .admin-panel table th:nth-child(5),
+  .admin-panel table td:nth-child(5),
+  .admin-panel table th:nth-child(3),
+  .admin-panel table td:nth-child(3) {
+    display: none;
+  }
+
+  .admin-panel table {
+    font-size: 0.7rem;
+  }
+
+  .admin-panel th {
+    padding: 0.4rem 0.2rem !important;
+    font-size: 0.6rem !important;
+  }
+
+  .admin-panel td {
+    padding: 0.4rem 0.2rem !important;
+  }
+
+  .admin-panel td > img {
+    width: 35px !important;
+    height: 35px !important;
+  }
+
+  .admin-panel table button {
+    padding: 0.25rem !important;
+  }
+
+  .admin-panel table button svg {
+    width: 14px !important;
+    height: 14px !important;
+  }
+}
+
 /* Prevent horizontal scrolling */
 .admin-panel body,
 .admin-panel html {
@@ -1869,6 +2726,629 @@
 }
 .admin-panel .shadow {
   box-shadow: var(--admin-card-shadow);
+}
+
+/* ==================== ATTENDANCE PAGE RESPONSIVE ==================== */
+@media (max-width: 768px) {
+  /* Attendance header: Stack title and tabs/button vertically */
+  .admin-panel .attendance-header {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 1rem !important;
+    padding: 1.5rem !important;
+  }
+
+  .admin-panel .attendance-header-top {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0.75rem !important;
+  }
+
+  .admin-panel .attendance-header-title {
+    font-size: 1.5rem !important;
+    font-weight: 700 !important;
+  }
+
+  .admin-panel .attendance-tabs {
+    display: flex !important;
+    gap: 0.5rem !important;
+    flex-wrap: wrap !important;
+  }
+
+  .admin-panel .attendance-tab-btn {
+    flex: 1;
+    min-width: 120px;
+    padding: 0.5rem 0.75rem !important;
+    font-size: 0.75rem !important;
+    white-space: nowrap;
+  }
+
+  .admin-panel .attendance-tab-btn svg {
+    display: none;
+  }
+
+  /* Punch list: Convert 6-column grid to mobile card view */
+  .admin-panel .punch-list-header {
+    display: none !important;
+  }
+
+  .admin-panel .punch-list-item {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 0 !important;
+    padding: 1rem !important;
+    margin-bottom: 0.75rem !important;
+    background: var(--admin-card-bg) !important;
+    border: 1px solid var(--admin-card-border) !important;
+    border-radius: var(--admin-radius-sm) !important;
+    align-items: stretch !important;
+  }
+
+  .admin-panel .punch-item-row {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    padding: 0.6rem 0 !important;
+    border-bottom: 1px solid var(--admin-border-light) !important;
+  }
+
+  .admin-panel .punch-item-row:last-child {
+    border-bottom: none !important;
+    padding-bottom: 0 !important;
+  }
+
+  .admin-panel .punch-item-label {
+    font-size: 0.75rem !important;
+    color: var(--admin-muted-foreground) !important;
+    font-weight: 500 !important;
+    text-transform: uppercase !important;
+  }
+
+  .admin-panel .punch-item-value {
+    font-weight: 600 !important;
+    color: var(--admin-foreground) !important;
+  }
+
+  /* Status badge */
+  .admin-panel .punch-status-badge {
+    padding: 0.35rem 0.7rem !important;
+    font-size: 0.7rem !important;
+    border-radius: 4px !important;
+  }
+
+  /* Toggle switch sizing */
+  .admin-panel .punch-toggle {
+    width: 48px !important;
+    height: 28px !important;
+  }
+
+  .admin-panel .punch-toggle > div {
+    width: 48px !important;
+    height: 28px !important;
+  }
+
+  /* Analytics: Make cards stack vertically */
+  .admin-panel .analytics-cards {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 1rem !important;
+  }
+
+  .admin-panel .analytics-card {
+    padding: 1rem !important;
+  }
+
+  .admin-panel .analytics-card-header {
+    margin-bottom: 0.75rem !important;
+  }
+
+  .admin-panel .analytics-card-header h3 {
+    font-size: 1rem !important;
+  }
+
+  /* Analytics metric grid: Stack to 2 columns */
+  .admin-panel .analytics-metrics {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 0.75rem !important;
+  }
+
+  .admin-panel .analytics-metric {
+    padding: 0.75rem !important;
+    background: white !important;
+    border-radius: 6px !important;
+    text-align: center !important;
+  }
+
+  .admin-panel .analytics-metric-label {
+    font-size: 0.7rem !important;
+  }
+
+  .admin-panel .analytics-metric-value {
+    font-size: 1.5rem !important;
+  }
+
+  /* Daily breakdown: Compact styling */
+  .admin-panel .analytics-daily-breakdown {
+    max-height: 250px !important;
+    overflow-y: auto !important;
+  }
+
+  .admin-panel .analytics-daily-item {
+    padding: 0.5rem !important;
+    font-size: 0.75rem !important;
+    display: flex !important;
+    justify-content: space-between !important;
+  }
+
+  /* Month selector: Full width */
+  .admin-panel .analytics-month-selector {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0.5rem !important;
+    margin-bottom: 1.5rem !important;
+  }
+
+  .admin-panel .analytics-month-selector label {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0.5rem !important;
+    align-items: flex-start !important;
+  }
+
+  .admin-panel .analytics-month-selector input {
+    width: 100% !important;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Attendance header: Compact on small phone */
+  .admin-panel .attendance-header {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0.75rem !important;
+    padding: 1rem !important;
+  }
+
+  .admin-panel .attendance-header-title {
+    font-size: 1.25rem !important;
+    font-weight: 700 !important;
+  }
+
+  .admin-panel .attendance-tabs {
+    display: flex !important;
+    gap: 0.35rem !important;
+    flex-wrap: wrap !important;
+  }
+
+  .admin-panel .attendance-tab-btn {
+    flex: 1;
+    min-width: 100px;
+    padding: 0.45rem 0.5rem !important;
+    font-size: 0.7rem !important;
+  }
+
+  .admin-panel .attendance-refresh-btn {
+    width: 100% !important;
+    padding: 0.6rem 1rem !important;
+    font-size: 0.75rem !important;
+  }
+
+  /* Punch list: Mobile card view optimizations */
+  .admin-panel .punch-list-item {
+    display: block !important;
+    padding: 0.75rem !important;
+    margin-bottom: 0.6rem !important;
+    background: var(--admin-card-bg) !important;
+    border: 1px solid var(--admin-card-border) !important;
+    border-radius: var(--admin-radius-sm) !important;
+  }
+
+  /* Staff name as card header */
+  .admin-panel .punch-item-name {
+    font-size: 1rem !important;
+    font-weight: 700 !important;
+    margin-bottom: 0.75rem !important;
+    display: block !important;
+    color: var(--admin-foreground) !important;
+  }
+
+  .admin-panel .punch-item-row {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    padding: 0.5rem 0 !important;
+    border-bottom: 1px solid var(--admin-border-light) !important;
+    font-size: 0.8rem !important;
+  }
+
+  .admin-panel .punch-item-row:last-child {
+    border-bottom: none !important;
+  }
+
+  .admin-panel .punch-item-label {
+    font-size: 0.7rem !important;
+    color: var(--admin-muted-foreground) !important;
+    font-weight: 500 !important;
+    text-transform: uppercase !important;
+  }
+
+  .admin-panel .punch-item-value {
+    font-weight: 600 !important;
+    color: var(--admin-foreground) !important;
+    text-align: right !important;
+  }
+
+  /* Toggle: Last row, full width */
+  .admin-panel .punch-item-toggle {
+    display: flex !important;
+    justify-content: center !important;
+    padding: 0.75rem 0 0 0 !important;
+    margin-top: 0.5rem !important;
+    padding-top: 0.75rem !important;
+    border-top: 1px solid var(--admin-border-light) !important;
+  }
+
+  /* Analytics: Single column stack */
+  .admin-panel .analytics-cards {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 0.75rem !important;
+  }
+
+  .admin-panel .analytics-card {
+    padding: 0.75rem !important;
+    background: var(--admin-card-bg) !important;
+    border: 1px solid var(--admin-card-border) !important;
+    border-radius: var(--admin-radius-sm) !important;
+  }
+
+  .admin-panel .analytics-card-header h3 {
+    font-size: 0.95rem !important;
+    margin: 0 0 0.5rem 0 !important;
+  }
+
+  .admin-panel .analytics-card-header p {
+    font-size: 0.75rem !important;
+    margin: 0 !important;
+  }
+
+  /* Analytics metrics: Stack to 1 column on small phones */
+  .admin-panel .analytics-metrics {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 0.6rem !important;
+  }
+
+  .admin-panel .analytics-metric {
+    padding: 0.65rem !important;
+    background: white !important;
+    border-radius: 6px !important;
+    text-align: center !important;
+  }
+
+  .admin-panel .analytics-metric-label {
+    font-size: 0.65rem !important;
+  }
+
+  .admin-panel .analytics-metric-value {
+    font-size: 1.25rem !important;
+  }
+
+  /* Daily breakdown */
+  .admin-panel .analytics-daily-breakdown {
+    max-height: 200px !important;
+  }
+
+  .admin-panel .analytics-daily-item {
+    padding: 0.45rem !important;
+    font-size: 0.7rem !important;
+  }
+
+  /* Month selector: Full width input */
+  .admin-panel .analytics-month-selector {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0.5rem !important;
+    margin-bottom: 1rem !important;
+  }
+
+  .admin-panel .analytics-month-selector label {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0.35rem !important;
+    align-items: flex-start !important;
+    width: 100% !important;
+  }
+
+  .admin-panel .analytics-month-selector label svg {
+    display: none;
+  }
+
+  .admin-panel .analytics-month-selector input {
+    width: 100% !important;
+    font-size: 16px !important;
+    padding: 0.6rem 1rem !important;
+  }
+}
+
+/* ==================== MEMBERSHIP PAGE RESPONSIVE ==================== */
+@media (max-width: 768px) {
+  /* Membership page: Header responsive */
+  .admin-panel .membership-page {
+    padding: 1.25rem !important;
+  }
+
+  .admin-panel .membership-title {
+    font-size: 1.5rem !important;
+    margin-bottom: 1.5rem !important;
+  }
+
+  /* Membership grid: Stack to single column on tablets */
+  .admin-panel .membership-grid {
+    grid-template-columns: 1fr !important;
+    gap: 1rem !important;
+  }
+
+  .admin-panel .membership-card {
+    padding: 1.25rem !important;
+    border-radius: 10px !important;
+  }
+
+  /* View mode: Stack header vertically */
+  .admin-panel .membership-header {
+    flex-direction: column !important;
+    gap: 1rem !important;
+    align-items: stretch !important;
+  }
+
+  .admin-panel .membership-edit-btn {
+    align-self: flex-start !important;
+    font-size: 0.75rem !important;
+    padding: 0.45rem 0.75rem !important;
+  }
+
+  /* Edit form: Full width inputs */
+  .admin-panel .membership-edit-form input,
+  .admin-panel .membership-edit-form textarea {
+    font-size: 16px !important;
+    padding: 0.65rem !important;
+  }
+
+  /* Edit buttons: Stack on tablet */
+  .admin-panel .membership-edit-buttons {
+    gap: 0.75rem !important;
+  }
+
+  .admin-panel .membership-edit-buttons button {
+    padding: 0.65rem 1rem !important;
+    font-size: 0.8rem !important;
+    min-height: 40px !important;
+  }
+
+  /* Card sections: Reduce padding on tablet */
+  .admin-panel .membership-discount,
+  .admin-panel .membership-price {
+    padding: 0.65rem !important;
+    font-size: 0.95rem !important;
+  }
+
+  .admin-panel .membership-discount p,
+  .admin-panel .membership-price p {
+    font-size: 0.95rem !important;
+  }
+
+  /* Benefits list: Compact on tablet */
+  .admin-panel .membership-benefits h4 {
+    font-size: 0.85rem !important;
+    margin-bottom: 0.5rem !important;
+  }
+
+  .admin-panel .membership-benefits ul {
+    padding-left: 1.25rem !important;
+    gap: 0.35rem !important;
+  }
+
+  .admin-panel .membership-benefits li {
+    font-size: 0.85rem !important;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Membership page: Mobile layout */
+  .admin-panel .membership-page {
+    padding: 0.85rem !important;
+  }
+
+  .admin-panel .membership-title {
+    font-size: 1.25rem !important;
+    margin-bottom: 1.25rem !important;
+    font-weight: 700 !important;
+  }
+
+  /* Membership grid: Single column on mobile */
+  .admin-panel .membership-grid {
+    grid-template-columns: 1fr !important;
+    gap: 0.75rem !important;
+  }
+
+  .admin-panel .membership-card {
+    padding: 1rem !important;
+    border-radius: 8px !important;
+    border: 1px solid #e0e0e0 !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06) !important;
+  }
+
+  /* View mode: Full width header stack */
+  .admin-panel .membership-view {
+    display: block !important;
+  }
+
+  .admin-panel .membership-header {
+    flex-direction: column !important;
+    gap: 0.75rem !important;
+    align-items: stretch !important;
+    margin-bottom: 0.75rem !important;
+  }
+
+  .admin-panel .membership-info {
+    width: 100% !important;
+  }
+
+  .admin-panel .membership-name {
+    font-size: 1.1rem !important;
+    margin-bottom: 0.2rem !important;
+  }
+
+  .admin-panel .membership-description {
+    font-size: 0.8rem !important;
+    margin-bottom: 0.3rem !important;
+  }
+
+  .admin-panel .membership-edit-btn {
+    width: 100% !important;
+    justify-content: center !important;
+    font-size: 0.7rem !important;
+    padding: 0.5rem 0.65rem !important;
+    min-height: 38px !important;
+  }
+
+  .admin-panel .membership-edit-btn svg {
+    width: 14px !important;
+    height: 14px !important;
+  }
+
+  /* Edit form: Full width on mobile */
+  .admin-panel .membership-edit-form {
+    gap: 0.75rem !important;
+  }
+
+  .admin-panel .membership-edit-form input,
+  .admin-panel .membership-edit-form textarea {
+    font-size: 16px !important;
+    padding: 0.6rem 0.8rem !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    border: 1px solid #ddd !important;
+    border-radius: 6px !important;
+  }
+
+  .admin-panel .membership-edit-form input:focus,
+  .admin-panel .membership-edit-form textarea:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  }
+
+  .admin-panel .membership-edit-form > div > label {
+    font-size: 0.75rem !important;
+    font-weight: 600 !important;
+  }
+
+  .admin-panel .membership-edit-form > div > input {
+    width: 100% !important;
+  }
+
+  /* Benefits section on mobile */
+  .admin-panel .membership-edit-form > div:nth-of-type(4) {
+    margin-bottom: 0.25rem !important;
+  }
+
+  .admin-panel .membership-edit-form > div:nth-of-type(4) > div:nth-child(1) {
+    margin-bottom: 0.6rem !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+  }
+
+  .admin-panel .membership-edit-form > div:nth-of-type(4) button {
+    padding: 0.4rem 0.75rem !important;
+    font-size: 0.7rem !important;
+  }
+
+  .admin-panel .membership-edit-form > div:nth-of-type(4) > div:nth-of-type(2) {
+    display: flex !important;
+    gap: 0.4rem !important;
+    margin-bottom: 0.4rem !important;
+  }
+
+  .admin-panel .membership-edit-form > div:nth-of-type(4) input {
+    font-size: 0.8rem !important;
+  }
+
+  .admin-panel .membership-edit-form > div:nth-of-type(4) button:last-of-type {
+    padding: 0.35rem !important;
+  }
+
+  /* Edit buttons: Stack vertically on mobile */
+  .admin-panel .membership-edit-buttons {
+    flex-direction: column !important;
+    gap: 0.6rem !important;
+  }
+
+  .admin-panel .membership-edit-buttons button {
+    width: 100% !important;
+    flex: none !important;
+    padding: 0.6rem 1rem !important;
+    font-size: 0.75rem !important;
+    min-height: 42px !important;
+    border-radius: 6px !important;
+  }
+
+  /* Card discount section: Mobile */
+  .admin-panel .membership-discount {
+    background: #f0f4ff !important;
+    padding: 0.65rem !important;
+    border-radius: 6px !important;
+    margin-bottom: 0.75rem !important;
+  }
+
+  .admin-panel .membership-discount p {
+    font-size: 1rem !important;
+    margin: 0 !important;
+    font-weight: 600 !important;
+    color: #667eea !important;
+  }
+
+  /* Card price section: Mobile */
+  .admin-panel .membership-price {
+    background: #fff3cd !important;
+    padding: 0.65rem !important;
+    border-radius: 6px !important;
+    margin-bottom: 0.75rem !important;
+  }
+
+  .admin-panel .membership-price p {
+    font-size: 1rem !important;
+    margin: 0 !important;
+    font-weight: 600 !important;
+    color: #856404 !important;
+  }
+
+  /* Benefits list: Compact on mobile */
+  .admin-panel .membership-benefits {
+    margin-top: 0.75rem !important;
+  }
+
+  .admin-panel .membership-benefits h4 {
+    font-size: 0.8rem !important;
+    margin: 0 0 0.5rem 0 !important;
+    font-weight: 600 !important;
+  }
+
+  .admin-panel .membership-benefits ul {
+    margin: 0 !important;
+    padding-left: 1.2rem !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0.3rem !important;
+  }
+
+  .admin-panel .membership-benefits li {
+    font-size: 0.8rem !important;
+    color: #333 !important;
+    line-height: 1.4 !important;
+  }
 }
 
 /* ==================== CONTENT MANAGEMENT STYLES ==================== */

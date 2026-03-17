@@ -108,8 +108,9 @@ const MembershipManagement = () => {
   }
 
   return (
-    <div style={{ padding: "2rem" }}>
+    <div className="membership-page" style={{ padding: "2rem" }}>
       <h1
+        className="membership-title"
         style={{ marginBottom: "2rem", fontSize: "2rem", fontWeight: "bold" }}
       >
         Membership Management
@@ -146,6 +147,7 @@ const MembershipManagement = () => {
       )}
 
       <div
+        className="membership-grid"
         style={{
           display: "grid",
           gridTemplateColumns: "repeat(auto-fit, minmax(400px, 1fr))",
@@ -155,6 +157,7 @@ const MembershipManagement = () => {
         {memberships.map((membership) => (
           <div
             key={membership.id}
+            className="membership-card"
             style={{
               border: "1px solid #ddd",
               borderRadius: "12px",
@@ -166,6 +169,7 @@ const MembershipManagement = () => {
             {editingId === membership.id ? (
               // Edit Mode
               <div
+                className="membership-edit-form"
                 style={{
                   display: "flex",
                   flexDirection: "column",
@@ -325,7 +329,10 @@ const MembershipManagement = () => {
                   ))}
                 </div>
 
-                <div style={{ display: "flex", gap: "1rem" }}>
+                <div
+                  className="membership-edit-buttons"
+                  style={{ display: "flex", gap: "1rem" }}
+                >
                   <button
                     onClick={() => handleSave(membership.id)}
                     style={{
@@ -362,8 +369,9 @@ const MembershipManagement = () => {
               </div>
             ) : (
               // View Mode
-              <div>
+              <div className="membership-view">
                 <div
+                  className="membership-header"
                   style={{
                     display: "flex",
                     justifyContent: "space-between",
@@ -371,8 +379,9 @@ const MembershipManagement = () => {
                     marginBottom: "1rem",
                   }}
                 >
-                  <div>
+                  <div className="membership-info">
                     <h3
+                      className="membership-name"
                       style={{
                         margin: "0 0 0.25rem",
                         fontSize: "1.25rem",
@@ -382,6 +391,7 @@ const MembershipManagement = () => {
                       {membership.name}
                     </h3>
                     <p
+                      className="membership-description"
                       style={{
                         margin: "0 0 0.5rem",
                         color: "#666",
@@ -392,6 +402,7 @@ const MembershipManagement = () => {
                     </p>
                   </div>
                   <button
+                    className="membership-edit-btn"
                     onClick={() => handleEdit(membership)}
                     style={{
                       background: "#667eea",
@@ -410,6 +421,7 @@ const MembershipManagement = () => {
                 </div>
 
                 <div
+                  className="membership-discount"
                   style={{
                     background: "#f0f4ff",
                     padding: "0.75rem",
@@ -431,6 +443,7 @@ const MembershipManagement = () => {
 
                 {membership.price && (
                   <div
+                    className="membership-price"
                     style={{
                       background: "#fff3cd",
                       padding: "0.75rem",
@@ -455,7 +468,7 @@ const MembershipManagement = () => {
                   </div>
                 )}
 
-                <div>
+                <div className="membership-benefits">
                   <h4 style={{ margin: "0 0 0.75rem", fontWeight: "600" }}>
                     Benefits:
                   </h4>

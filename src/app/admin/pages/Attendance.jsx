@@ -303,6 +303,7 @@ const Attendance = () => {
     <div style={{ padding: "0" }}>
       {/* Header with Tabs */}
       <div
+        className="attendance-header"
         style={{
           background:
             "linear-gradient(135deg, var(--primary) 0%, rgba(139, 92, 246, 0.8) 100%)",
@@ -315,8 +316,9 @@ const Attendance = () => {
           alignItems: "center",
         }}
       >
-        <div>
+        <div className="attendance-header-top">
           <h1
+            className="attendance-header-title"
             style={{
               fontSize: "1.875rem",
               fontWeight: "700",
@@ -326,8 +328,12 @@ const Attendance = () => {
             Staff Attendance
           </h1>
           {/* Tabs */}
-          <div style={{ display: "flex", gap: "1rem" }}>
+          <div
+            className="attendance-tabs"
+            style={{ display: "flex", gap: "1rem" }}
+          >
             <button
+              className="attendance-tab-btn"
               onClick={() => setCurrentTab("punch")}
               style={{
                 padding: "0.5rem 1.5rem",
@@ -348,6 +354,7 @@ const Attendance = () => {
               Punch In/Out
             </button>
             <button
+              className="attendance-tab-btn"
               onClick={() => setCurrentTab("analytics")}
               style={{
                 padding: "0.5rem 1.5rem",
@@ -371,6 +378,7 @@ const Attendance = () => {
           </div>
         </div>
         <button
+          className="attendance-refresh-btn btn btn-secondary"
           onClick={() => {
             if (currentTab === "punch") {
               refreshPunchStatus();
@@ -378,7 +386,6 @@ const Attendance = () => {
               loadAnalytics();
             }
           }}
-          className="btn btn-secondary"
           style={{ padding: "0.75rem 1.5rem", fontWeight: "600" }}
         >
           {analyticsLoading && currentTab === "analytics"
@@ -400,6 +407,7 @@ const Attendance = () => {
         >
           {/* List Header */}
           <div
+            className="punch-list-header"
             style={{
               display: "grid",
               gridTemplateColumns: "1fr 1fr 1fr 1fr 1fr 0.5fr",
@@ -435,6 +443,7 @@ const Attendance = () => {
             return (
               <div
                 key={staffMember.id}
+                className="punch-list-item"
                 style={{
                   display: "grid",
                   gridTemplateColumns: "1fr 1fr 1fr 1fr 1fr 0.5fr",
@@ -462,6 +471,7 @@ const Attendance = () => {
               >
                 {/* Staff Name */}
                 <div
+                  className="punch-item-name"
                   style={{
                     fontSize: "1rem",
                     fontWeight: "700",
@@ -473,16 +483,21 @@ const Attendance = () => {
 
                 {/* Position */}
                 <div
+                  className="punch-item-row"
                   style={{
                     fontSize: "0.875rem",
                     color: "var(--muted-foreground)",
                   }}
                 >
-                  {staffMember.position || "Staff Member"}
+                  <span className="punch-item-label">Position</span>
+                  <span className="punch-item-value">
+                    {staffMember.position || "Staff Member"}
+                  </span>
                 </div>
 
                 {/* Punch In Time */}
                 <div
+                  className="punch-item-row"
                   style={{
                     fontSize: "0.875rem",
                     fontWeight: "600",
@@ -492,22 +507,28 @@ const Attendance = () => {
                         : "var(--muted-foreground)",
                   }}
                 >
-                  {punchInTime}
+                  <span className="punch-item-label">In Time</span>
+                  <span className="punch-item-value">{punchInTime}</span>
                 </div>
 
                 {/* Working Hours - Live Updated */}
                 <div
+                  className="punch-item-row"
                   style={{
                     fontSize: "0.95rem",
                     fontWeight: "700",
                     color: "var(--primary)",
                   }}
                 >
-                  {workHours.toFixed(2)}h
+                  <span className="punch-item-label">Hours</span>
+                  <span className="punch-item-value">
+                    {workHours.toFixed(2)}h
+                  </span>
                 </div>
 
                 {/* Status Badge */}
                 <div
+                  className="punch-status-badge"
                   style={{
                     padding: "0.4rem 0.8rem",
                     borderRadius: "6px",
@@ -526,7 +547,10 @@ const Attendance = () => {
                 </div>
 
                 {/* Toggle Switch */}
-                <div style={{ display: "flex", justifyContent: "center" }}>
+                <div
+                  className="punch-item-toggle"
+                  style={{ display: "flex", justifyContent: "center" }}
+                >
                   <label
                     style={{
                       position: "relative",
@@ -606,7 +630,10 @@ const Attendance = () => {
           }}
         >
           {/* Month Selector */}
-          <div style={{ marginBottom: "2rem" }}>
+          <div
+            className="analytics-month-selector"
+            style={{ marginBottom: "2rem" }}
+          >
             <label
               style={{
                 display: "flex",
@@ -647,6 +674,7 @@ const Attendance = () => {
             </div>
           ) : (
             <div
+              className="analytics-cards"
               style={{
                 display: "grid",
                 gridTemplateColumns: "repeat(auto-fill, minmax(350px, 1fr))",
@@ -672,6 +700,7 @@ const Attendance = () => {
                 return (
                   <div
                     key={staffMember.id}
+                    className="analytics-card"
                     style={{
                       border: "1px solid #e5e7eb",
                       borderRadius: "var(--radius)",
@@ -679,7 +708,10 @@ const Attendance = () => {
                       background: "#f9fafb",
                     }}
                   >
-                    <div style={{ marginBottom: "1rem" }}>
+                    <div
+                      className="analytics-card-header"
+                      style={{ marginBottom: "1rem" }}
+                    >
                       <h3
                         style={{
                           fontSize: "1.125rem",
@@ -701,6 +733,7 @@ const Attendance = () => {
                     </div>
 
                     <div
+                      className="analytics-metrics"
                       style={{
                         display: "grid",
                         gridTemplateColumns: "1fr 1fr",
@@ -708,6 +741,7 @@ const Attendance = () => {
                       }}
                     >
                       <div
+                        className="analytics-metric"
                         style={{
                           background: "white",
                           padding: "1rem",
@@ -716,6 +750,7 @@ const Attendance = () => {
                         }}
                       >
                         <div
+                          className="analytics-metric-label"
                           style={{
                             fontSize: "0.75rem",
                             color: "var(--muted-foreground)",
@@ -725,6 +760,7 @@ const Attendance = () => {
                           Total Work Hours
                         </div>
                         <div
+                          className="analytics-metric-value"
                           style={{
                             fontSize: "1.75rem",
                             fontWeight: "700",
@@ -736,6 +772,7 @@ const Attendance = () => {
                       </div>
 
                       <div
+                        className="analytics-metric"
                         style={{
                           background: "white",
                           padding: "1rem",
@@ -744,6 +781,7 @@ const Attendance = () => {
                         }}
                       >
                         <div
+                          className="analytics-metric-label"
                           style={{
                             fontSize: "0.75rem",
                             color: "var(--muted-foreground)",
@@ -753,6 +791,7 @@ const Attendance = () => {
                           Present Days
                         </div>
                         <div
+                          className="analytics-metric-value"
                           style={{
                             fontSize: "1.75rem",
                             fontWeight: "700",
@@ -775,7 +814,10 @@ const Attendance = () => {
                       >
                         Daily Breakdown:
                       </h4>
-                      <div style={{ maxHeight: "300px", overflowY: "auto" }}>
+                      <div
+                        className="analytics-daily-breakdown"
+                        style={{ maxHeight: "300px", overflowY: "auto" }}
+                      >
                         {Object.entries(staffData.attendance)
                           .sort(([dateA], [dateB]) =>
                             dateB.localeCompare(dateA),
@@ -783,6 +825,7 @@ const Attendance = () => {
                           .map(([date, dayData]) => (
                             <div
                               key={date}
+                              className="analytics-daily-item"
                               style={{
                                 padding: "0.5rem",
                                 fontSize: "0.8rem",

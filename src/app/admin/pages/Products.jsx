@@ -129,13 +129,7 @@ const Products = () => {
 
   return (
     <div>
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 350px",
-          gap: "2rem",
-        }}
-      >
+      <div className="layout-two-col">
         <div className="card">
           <div className="card-header">
             <h2 className="card-title">Inventory List</h2>
@@ -302,13 +296,7 @@ const Products = () => {
                   ))}
                 </datalist>
               </div>
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr 1fr",
-                  gap: "1rem",
-                }}
-              >
+              <div className="grid-cols-2">
                 <div>
                   <label
                     style={{
