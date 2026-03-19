@@ -238,6 +238,7 @@ const CouponsPage = () => {
   return (
     <div style={{ padding: "1.5rem" }}>
       <div
+        className="admin-panel coupon-page-header"
         style={{
           display: "flex",
           justifyContent: "space-between",
@@ -339,13 +340,7 @@ const CouponsPage = () => {
             onSubmit={handleSubmit}
             style={{ display: "grid", gap: "1.5rem" }}
           >
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                gap: "1rem",
-              }}
-            >
+            <div className="admin-panel coupon-form-grid-2col">
               <div>
                 <label
                   style={{
@@ -401,13 +396,7 @@ const CouponsPage = () => {
               </div>
             </div>
 
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr 1fr",
-                gap: "1rem",
-              }}
-            >
+            <div className="admin-panel coupon-form-grid-3col">
               <div>
                 <label
                   style={{
@@ -490,13 +479,7 @@ const CouponsPage = () => {
               </div>
             </div>
 
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr 1fr",
-                gap: "1rem",
-              }}
-            >
+            <div className="admin-panel coupon-form-grid-3col">
               <div>
                 <label
                   style={{
@@ -689,8 +672,8 @@ const CouponsPage = () => {
         </div>
       ) : (
         <div
+          className="admin-panel coupon-cards-grid"
           style={{
-            display: "grid",
             gap: "1rem",
           }}
         >
@@ -699,15 +682,12 @@ const CouponsPage = () => {
             return (
               <div
                 key={coupon.code}
+                className="admin-panel coupon-card"
                 style={{
                   background: "#fff",
                   border: "1px solid #e5e7eb",
                   borderRadius: "0.5rem",
                   padding: "1.5rem",
-                  display: "grid",
-                  gridTemplateColumns: "1fr 1fr 1fr 0.5fr",
-                  gap: "1rem",
-                  alignItems: "center",
                 }}
               >
                 <div>

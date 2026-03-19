@@ -111,6 +111,123 @@ const AccountCreation = () => {
 
   return (
     <div style={{ padding: "1rem" }}>
+      <style>{`
+        #account-container {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 2rem;
+        }
+
+        @media (max-width: 1023px) {
+          #account-container {
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 1.5rem !important;
+          }
+
+          .account-form-panel {
+            order: -1;
+            width: 100%;
+          }
+        }
+
+        @media (max-width: 768px) {
+          .account-form-group {
+            margin-bottom: 1rem !important;
+          }
+
+          .account-form-input {
+            font-size: 16px !important;
+            width: 100%;
+            min-height: 40px;
+          }
+
+          .account-form-button {
+            padding: 0.65rem 1rem !important;
+            font-size: 0.85rem !important;
+            min-height: 40px !important;
+            width: 100% !important;
+          }
+
+          .account-item {
+            padding: 0.75rem !important;
+            gap: 0.75rem !important;
+          }
+
+          .account-item-info {
+            flex: 1;
+          }
+
+          .account-item-info-name {
+            font-size: 0.9rem !important;
+            font-weight: 600 !important;
+            margin: 0 !important;
+          }
+
+          .account-item-info-email {
+            font-size: 0.75rem !important;
+            margin: 0.25rem 0 0 0 !important;
+          }
+
+          .account-item-role {
+            padding: 2px 6px !important;
+            font-size: 0.6rem !important;
+            margin-top: 4px !important;
+          }
+
+          .account-item-delete {
+            padding: 0.4rem !important;
+            min-width: 32px !important;
+            min-height: 32px !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+          }
+        }
+
+        @media (max-width: 480px) {
+          #account-container {
+            gap: 0.75rem !important;
+            padding: 0.5rem !important;
+          }
+
+          .account-form-group {
+            margin-bottom: 0.75rem !important;
+          }
+
+          .account-form-input {
+            font-size: 16px !important;
+            padding: 0.6rem !important;
+            min-height: 40px !important;
+            width: 100%;
+          }
+
+          .account-form-button {
+            padding: 0.65rem 1rem !important;
+            font-size: 0.8rem !important;
+            min-height: 40px !important;
+            margin-top: 0.75rem !important;
+          }
+
+          .account-item {
+            padding: 0.5rem !important;
+          }
+
+          .account-item-info-name {
+            font-size: 0.8rem !important;
+          }
+
+          .account-item-info-email {
+            font-size: 0.65rem !important;
+          }
+
+          .account-item-delete svg {
+            width: 14px !important;
+            height: 14px !important;
+          }
+        }
+      `}</style>
+
       <div
         style={{
           display: "flex",
@@ -124,11 +241,9 @@ const AccountCreation = () => {
         </h1>
       </div>
 
-      <div
-        style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "2rem" }}
-      >
+      <div id="account-container">
         {/* Create Account Form */}
-        <div className="card">
+        <div className="card account-form-panel">
           <div className="card-header">
             <h2
               className="card-title"
@@ -178,13 +293,13 @@ const AccountCreation = () => {
               onSubmit={handleCreateAccount}
               style={{ display: "flex", flexDirection: "column", gap: "1rem" }}
             >
-              <div className="form-group">
+              <div className="form-group account-form-group">
                 <label className="label">Display Name</label>
                 <div className="input-group">
                   <User size={18} className="input-icon" />
                   <input
                     type="text"
-                    className="input"
+                    className="input account-form-input"
                     value={displayName}
                     onChange={(e) => setDisplayName(e.target.value)}
                     placeholder="Full Name"
@@ -194,13 +309,13 @@ const AccountCreation = () => {
                 </div>
               </div>
 
-              <div className="form-group">
+              <div className="form-group account-form-group">
                 <label className="label">Email Address</label>
                 <div className="input-group">
                   <Mail size={18} className="input-icon" />
                   <input
                     type="email"
-                    className="input"
+                    className="input account-form-input"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="email@example.com"
@@ -210,13 +325,13 @@ const AccountCreation = () => {
                 </div>
               </div>
 
-              <div className="form-group">
+              <div className="form-group account-form-group">
                 <label className="label">Password</label>
                 <div className="input-group">
                   <Lock size={18} className="input-icon" />
                   <input
                     type="password"
-                    className="input"
+                    className="input account-form-input"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Min 6 characters"
@@ -227,12 +342,12 @@ const AccountCreation = () => {
                 </div>
               </div>
 
-              <div className="form-group">
+              <div className="form-group account-form-group">
                 <label className="label">Staff Role</label>
                 <div className="input-group">
                   <Shield size={18} className="input-icon" />
                   <select
-                    className="input"
+                    className="input account-form-input"
                     value={role}
                     onChange={(e) => setRole(e.target.value)}
                     style={{ paddingLeft: "2.5rem" }}
@@ -245,7 +360,7 @@ const AccountCreation = () => {
 
               <button
                 type="submit"
-                className="btn btn-primary"
+                className="btn btn-primary account-form-button"
                 disabled={loading}
                 style={{
                   marginTop: "1rem",
@@ -287,6 +402,7 @@ const AccountCreation = () => {
                 {users.map((u) => (
                   <div
                     key={u.id}
+                    className="account-item"
                     style={{
                       display: "flex",
                       justifyContent: "space-between",
@@ -297,8 +413,9 @@ const AccountCreation = () => {
                       border: "1px solid var(--admin-border-light)",
                     }}
                   >
-                    <div>
+                    <div className="account-item-info">
                       <div
+                        className="account-item-info-name"
                         style={{
                           fontWeight: 600,
                           color: "var(--admin-foreground)",
@@ -307,6 +424,7 @@ const AccountCreation = () => {
                         {u.displayName || "Unnamed User"}
                       </div>
                       <div
+                        className="account-item-info-email"
                         style={{
                           fontSize: "0.8rem",
                           color: "var(--admin-muted-foreground)",
@@ -315,6 +433,7 @@ const AccountCreation = () => {
                         {u.email}
                       </div>
                       <div
+                        className="account-item-role"
                         style={{
                           display: "inline-block",
                           padding: "2px 8px",
@@ -336,11 +455,13 @@ const AccountCreation = () => {
                     </div>
                     <button
                       onClick={() => handleDeleteUser(u.id)}
+                      className="account-item-delete"
                       style={{
                         color: "var(--admin-danger)",
                         border: "none",
                         background: "none",
                         cursor: "pointer",
+                        padding: "0.5rem",
                       }}
                     >
                       <Trash2 size={18} />

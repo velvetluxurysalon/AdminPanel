@@ -172,6 +172,9 @@
   flex-direction: column;
   gap: 0.25rem;
   flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  min-height: 0;
 }
 
 .admin-panel .nav-section {
@@ -780,11 +783,14 @@
     height: 100vh;
     transform: translateX(-100%);
     box-shadow: 4px 0 24px rgba(0, 0, 0, 0.15);
-    z-index: 100;
+    z-index: 101;
     background: var(--admin-sidebar-bg);
     transition: transform var(--admin-transition-base) ease;
     overflow-y: auto;
     padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    padding-top: 4rem;
   }
 
   .admin-panel .sidebar.open {
@@ -2965,111 +2971,290 @@
   .admin-panel .punch-item-row:last-child {
     border-bottom: none !important;
   }
+}
 
-  .admin-panel .punch-item-label {
-    font-size: 0.7rem !important;
-    color: var(--admin-muted-foreground) !important;
-    font-weight: 500 !important;
-    text-transform: uppercase !important;
+/* ==================== COUPONS PAGE RESPONSIVE ==================== */
+
+/* Coupon form grid - make responsive for mobile */
+.admin-panel .coupon-form-grid-2col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.admin-panel .coupon-form-grid-3col {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 1rem;
+}
+
+/* Coupon card grid - display multiple cards in grid */
+.admin-panel .coupon-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 1.5rem;
+}
+
+/* Coupon card - individual card styling */
+.admin-panel .coupon-card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.admin-panel .coupon-card > * {
+  min-width: 0;
+}
+
+.admin-panel .coupon-card code {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-panel .coupon-card p {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  word-break: break-word;
+}
+
+/* Responsive for tablet (769px - 1024px) */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .admin-panel .coupon-form-grid-2col {
+    grid-template-columns: 1fr;
   }
 
-  .admin-panel .punch-item-value {
-    font-weight: 600 !important;
-    color: var(--admin-foreground) !important;
-    text-align: right !important;
+  .admin-panel .coupon-form-grid-3col {
+    grid-template-columns: 1fr 1fr;
   }
 
-  /* Toggle: Last row, full width */
-  .admin-panel .punch-item-toggle {
-    display: flex !important;
-    justify-content: center !important;
-    padding: 0.75rem 0 0 0 !important;
-    margin-top: 0.5rem !important;
-    padding-top: 0.75rem !important;
-    border-top: 1px solid var(--admin-border-light) !important;
+  .admin-panel .coupon-cards-grid {
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1.25rem;
+  }
+}
+
+/* Responsive for medium mobile (481px - 768px) */
+@media (max-width: 768px) and (min-width: 481px) {
+  .admin-panel .coupon-form-grid-2col {
+    grid-template-columns: 1fr;
   }
 
-  /* Analytics: Single column stack */
-  .admin-panel .analytics-cards {
-    display: grid !important;
-    grid-template-columns: 1fr !important;
-    gap: 0.75rem !important;
+  .admin-panel .coupon-form-grid-3col {
+    grid-template-columns: 1fr;
   }
 
-  .admin-panel .analytics-card {
+  .admin-panel .coupon-cards-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .admin-panel .coupon-card {
+    gap: 1rem;
+    padding: 1.25rem;
+  }
+
+  .admin-panel .coupon-card-actions {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+    width: 100%;
+  }
+
+  .admin-panel .coupon-card-actions button {
+    width: 100%;
     padding: 0.75rem !important;
-    background: var(--admin-card-bg) !important;
-    border: 1px solid var(--admin-card-border) !important;
-    border-radius: var(--admin-radius-sm) !important;
+    font-size: 0.85rem !important;
+    min-height: 36px;
+  }
+}
+
+/* Responsive for small phone (max 480px) */
+@media (max-width: 480px) {
+  .admin-panel .coupon-form-grid-2col {
+    grid-template-columns: 1fr;
   }
 
-  .admin-panel .analytics-card-header h3 {
-    font-size: 0.95rem !important;
-    margin: 0 0 0.5rem 0 !important;
+  .admin-panel .coupon-form-grid-3col {
+    grid-template-columns: 1fr;
   }
 
-  .admin-panel .analytics-card-header p {
-    font-size: 0.75rem !important;
-    margin: 0 !important;
+  .admin-panel .coupon-cards-grid {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
   }
 
-  /* Analytics metrics: Stack to 1 column on small phones */
-  .admin-panel .analytics-metrics {
-    display: grid !important;
-    grid-template-columns: 1fr !important;
-    gap: 0.6rem !important;
+  .admin-panel .coupon-card {
+    gap: 0.75rem;
+    padding: 1rem;
+    flex-direction: column;
   }
 
-  .admin-panel .analytics-metric {
-    padding: 0.65rem !important;
-    background: white !important;
-    border-radius: 6px !important;
-    text-align: center !important;
-  }
-
-  .admin-panel .analytics-metric-label {
-    font-size: 0.65rem !important;
-  }
-
-  .admin-panel .analytics-metric-value {
-    font-size: 1.25rem !important;
-  }
-
-  /* Daily breakdown */
-  .admin-panel .analytics-daily-breakdown {
-    max-height: 200px !important;
-  }
-
-  .admin-panel .analytics-daily-item {
-    padding: 0.45rem !important;
-    font-size: 0.7rem !important;
-  }
-
-  /* Month selector: Full width input */
-  .admin-panel .analytics-month-selector {
-    display: flex !important;
-    flex-direction: column !important;
-    gap: 0.5rem !important;
-    margin-bottom: 1rem !important;
-  }
-
-  .admin-panel .analytics-month-selector label {
-    display: flex !important;
-    flex-direction: column !important;
-    gap: 0.35rem !important;
+  /* Make header flexbox on mobile for better spacing */
+  .admin-panel .coupon-page-header {
+    flex-direction: column;
     align-items: flex-start !important;
-    width: 100% !important;
+    gap: 1rem !important;
   }
 
-  .admin-panel .analytics-month-selector label svg {
-    display: none;
+  .admin-panel .coupon-page-header h1 {
+    font-size: 1.25rem;
+    margin-bottom: 0;
   }
 
-  .admin-panel .analytics-month-selector input {
-    width: 100% !important;
-    font-size: 16px !important;
-    padding: 0.6rem 1rem !important;
+  .admin-panel .coupon-page-header button {
+    width: 100%;
+    padding: 0.75rem 1rem !important;
+    font-size: 0.9rem !important;
+    min-height: 40px;
   }
+
+  /* Action buttons stack on small screens */
+  .admin-panel .coupon-card-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    width: 100%;
+  }
+
+  .admin-panel .coupon-card-actions button {
+    width: 100%;
+    padding: 0.75rem !important;
+    font-size: 0.8rem !important;
+    min-height: 40px;
+  }
+
+  /* Form styling for small screens */
+  .admin-panel .coupon-form-group {
+    margin-bottom: 1rem;
+  }
+
+  .admin-panel .coupon-form-group label {
+    font-size: 0.875rem;
+    font-weight: 500;
+  }
+
+  .admin-panel .coupon-form-group input,
+  .admin-panel .coupon-form-group select,
+  .admin-panel .coupon-form-group textarea {
+    font-size: 16px;
+    width: 100%;
+    padding: 0.75rem;
+    min-height: 40px;
+  }
+}
+
+.admin-panel .punch-item-label {
+  font-size: 0.7rem !important;
+  color: var(--admin-muted-foreground) !important;
+  font-weight: 500 !important;
+  text-transform: uppercase !important;
+}
+
+.admin-panel .punch-item-value {
+  font-weight: 600 !important;
+  color: var(--admin-foreground) !important;
+  text-align: right !important;
+}
+
+/* Toggle: Last row, full width */
+.admin-panel .punch-item-toggle {
+  display: flex !important;
+  justify-content: center !important;
+  padding: 0.75rem 0 0 0 !important;
+  margin-top: 0.5rem !important;
+  padding-top: 0.75rem !important;
+  border-top: 1px solid var(--admin-border-light) !important;
+}
+
+/* Analytics: Single column stack */
+.admin-panel .analytics-cards {
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  gap: 0.75rem !important;
+}
+
+.admin-panel .analytics-card {
+  padding: 0.75rem !important;
+  background: var(--admin-card-bg) !important;
+  border: 1px solid var(--admin-card-border) !important;
+  border-radius: var(--admin-radius-sm) !important;
+}
+
+.admin-panel .analytics-card-header h3 {
+  font-size: 0.95rem !important;
+  margin: 0 0 0.5rem 0 !important;
+}
+
+.admin-panel .analytics-card-header p {
+  font-size: 0.75rem !important;
+  margin: 0 !important;
+}
+
+/* Analytics metrics: Stack to 1 column on small phones */
+.admin-panel .analytics-metrics {
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  gap: 0.6rem !important;
+}
+
+.admin-panel .analytics-metric {
+  padding: 0.65rem !important;
+  background: white !important;
+  border-radius: 6px !important;
+  text-align: center !important;
+}
+
+.admin-panel .analytics-metric-label {
+  font-size: 0.65rem !important;
+}
+
+.admin-panel .analytics-metric-value {
+  font-size: 1.25rem !important;
+}
+
+/* Daily breakdown */
+.admin-panel .analytics-daily-breakdown {
+  max-height: 200px !important;
+}
+
+.admin-panel .analytics-daily-item {
+  padding: 0.45rem !important;
+  font-size: 0.7rem !important;
+}
+
+/* Month selector: Full width input */
+.admin-panel .analytics-month-selector {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 0.5rem !important;
+  margin-bottom: 1rem !important;
+}
+
+.admin-panel .analytics-month-selector label {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 0.35rem !important;
+  align-items: flex-start !important;
+  width: 100% !important;
+}
+
+.admin-panel .analytics-month-selector label svg {
+  display: none;
+}
+
+.admin-panel .analytics-month-selector input {
+  width: 100% !important;
+  font-size: 16px !important;
+  padding: 0.6rem 1rem !important;
 }
 
 /* ==================== MEMBERSHIP PAGE RESPONSIVE ==================== */
@@ -3351,6 +3536,647 @@
   }
 }
 
+/* ==================== GALLERY PAGE RESPONSIVE ==================== */
+
+@media (max-width: 1023px) {
+  #gallery-container {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 1.5rem !important;
+  }
+
+  #gallery-form-panel {
+    order: -1;
+    width: 100%;
+  }
+}
+
+@media (max-width: 768px) {
+  #gallery-container {
+    gap: 1rem !important;
+    padding: 0;
+  }
+
+  .gallery-grid {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)) !important;
+    gap: 0.75rem !important;
+  }
+
+  .gallery-item {
+    border-radius: 6px !important;
+    border: 1px solid var(--admin-border) !important;
+  }
+
+  .gallery-item img {
+    height: 150px !important;
+    width: 100% !important;
+  }
+
+  .gallery-item-info {
+    padding: 0.5rem !important;
+  }
+
+  .gallery-item-title {
+    font-size: 0.8rem !important;
+    margin: 0 !important;
+    font-weight: 600 !important;
+  }
+
+  .gallery-item-description {
+    font-size: 0.7rem !important;
+    margin: 0.25rem 0 0 0 !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+
+  .gallery-item-actions {
+    gap: 0.25rem !important;
+    margin-top: 0.5rem !important;
+    display: flex !important;
+  }
+
+  .gallery-item-actions button {
+    padding: 0.4rem !important;
+    min-width: 32px !important;
+    min-height: 32px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    background: none !important;
+    border: none !important;
+    cursor: pointer !important;
+  }
+
+  .gallery-item-actions button svg {
+    width: 14px !important;
+    height: 14px !important;
+  }
+
+  #gallery-form-panel {
+    width: 100%;
+  }
+
+  .gallery-form-input {
+    font-size: 16px !important;
+    width: 100%;
+    min-height: 40px;
+  }
+
+  .gallery-form-button {
+    padding: 0.65rem 1rem !important;
+    font-size: 0.85rem !important;
+    min-height: 40px !important;
+  }
+
+  .gallery-form-button-group {
+    display: flex !important;
+    flex-direction: row !important;
+    gap: 1rem !important;
+  }
+
+  .gallery-form-button-group button {
+    flex: 1 !important;
+  }
+}
+
+@media (max-width: 480px) {
+  #gallery-container {
+    gap: 0.75rem !important;
+    padding: 0.5rem !important;
+    margin: 0 !important;
+  }
+
+  .gallery-grid {
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)) !important;
+    gap: 0.5rem !important;
+  }
+
+  .gallery-item {
+    border-radius: 6px !important;
+    overflow: hidden !important;
+  }
+
+  .gallery-item img {
+    height: 110px !important;
+  }
+
+  .gallery-item-info {
+    padding: 0.35rem !important;
+  }
+
+  .gallery-item-title {
+    font-size: 0.7rem !important;
+    line-height: 1.1 !important;
+    margin: 0 !important;
+    font-weight: 600 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+
+  .gallery-item-description {
+    font-size: 0.6rem !important;
+    margin: 0.15rem 0 0 0 !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+
+  .gallery-item-actions {
+    gap: 0.2rem !important;
+    margin-top: 0.3rem !important;
+  }
+
+  .gallery-item-actions button {
+    padding: 0.3rem !important;
+    min-width: 28px !important;
+    min-height: 28px !important;
+  }
+
+  .gallery-item-actions button svg {
+    width: 12px !important;
+    height: 12px !important;
+  }
+
+  #gallery-form-panel {
+    width: 100%;
+  }
+
+  .gallery-form-input {
+    font-size: 16px !important;
+    padding: 0.6rem !important;
+    min-height: 40px !important;
+    width: 100%;
+  }
+
+  .gallery-form-button {
+    padding: 0.65rem 1rem !important;
+    font-size: 0.8rem !important;
+    min-height: 40px !important;
+  }
+
+  .gallery-form-button-group {
+    flex-direction: column !important;
+    gap: 0.5rem !important;
+  }
+
+  .gallery-form-button-group button {
+    width: 100% !important;
+  }
+}
+
+/* ==================== FAQ PAGE RESPONSIVE ==================== */
+
+@media (max-width: 1023px) {
+  #faq-container {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 1.5rem !important;
+  }
+
+  #faq-form-panel {
+    order: -1;
+    width: 100%;
+  }
+}
+
+@media (max-width: 768px) {
+  #faq-container {
+    gap: 1rem !important;
+    padding: 0;
+  }
+
+  .faq-item {
+    padding: 0.75rem !important;
+    gap: 0.75rem !important;
+  }
+
+  .faq-item-header {
+    display: flex !important;
+    align-items: flex-start !important;
+    gap: 0.5rem !important;
+  }
+
+  .faq-item-header p {
+    font-size: 0.85rem !important;
+    line-height: 1.4 !important;
+    margin: 0 !important;
+  }
+
+  .faq-item-actions {
+    display: flex !important;
+    gap: 0.25rem !important;
+    margin-top: 0.5rem !important;
+  }
+
+  .faq-item-actions button {
+    padding: 0.4rem !important;
+    min-width: 32px !important;
+    min-height: 32px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  .faq-item-answer {
+    padding-left: 0.75rem !important;
+    font-size: 0.8rem !important;
+    margin: 0 !important;
+  }
+
+  #faq-form-panel {
+    width: 100%;
+  }
+
+  .faq-form-input {
+    font-size: 16px !important;
+    width: 100%;
+    min-height: 40px;
+  }
+
+  .faq-form-button {
+    padding: 0.65rem 1rem !important;
+    font-size: 0.85rem !important;
+    min-height: 40px !important;
+    width: 100%;
+  }
+
+  .faq-form-button-group {
+    display: flex !important;
+    flex-direction: row !important;
+    gap: 1rem !important;
+  }
+
+  .faq-form-button-group button {
+    flex: 1 !important;
+  }
+}
+
+@media (max-width: 480px) {
+  #faq-container {
+    gap: 0.75rem !important;
+    padding: 0.5rem !important;
+    margin: 0 !important;
+  }
+
+  .faq-item {
+    padding: 0.5rem !important;
+  }
+
+  .faq-item-header p {
+    font-size: 0.75rem !important;
+  }
+
+  .faq-item-actions button svg {
+    width: 12px !important;
+    height: 12px !important;
+  }
+
+  .faq-form-input {
+    font-size: 16px !important;
+    padding: 0.6rem !important;
+    min-height: 40px !important;
+    width: 100%;
+  }
+
+  .faq-form-button {
+    padding: 0.65rem 1rem !important;
+    font-size: 0.8rem !important;
+    min-height: 40px !important;
+  }
+
+  .faq-form-button-group {
+    flex-direction: column !important;
+    gap: 0.5rem !important;
+  }
+
+  .faq-form-button-group button {
+    width: 100% !important;
+  }
+}
+
+/* ==================== OFFERS PAGE RESPONSIVE ==================== */
+
+@media (max-width: 1023px) {
+  #offers-container {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 1.5rem !important;
+  }
+
+  #offers-form-panel {
+    order: -1;
+    width: 100%;
+  }
+}
+
+@media (max-width: 768px) {
+  #offers-container {
+    gap: 1rem !important;
+    padding: 0;
+  }
+
+  .offer-card {
+    padding: 0.75rem !important;
+    gap: 0.75rem !important;
+  }
+
+  .offer-card img {
+    width: 60px !important;
+    height: 60px !important;
+    flex-shrink: 0;
+  }
+
+  .offer-card-info {
+    flex: 1;
+  }
+
+  .offer-card-info p {
+    margin: 0 0 0.25rem 0 !important;
+    font-size: 0.8rem !important;
+    line-height: 1.3 !important;
+  }
+
+  .offer-card-info > p:first-child {
+    font-weight: 600 !important;
+    font-size: 0.85rem !important;
+  }
+
+  .offer-card-discount {
+    font-size: 0.75rem !important;
+  }
+
+  .offer-card-validity {
+    font-size: 0.7rem !important;
+  }
+
+  .offer-card-actions {
+    display: flex !important;
+    gap: 0.25rem !important;
+    margin-top: 0.5rem !important;
+  }
+
+  .offer-card-actions button {
+    padding: 0.4rem !important;
+    min-width: 32px !important;
+    min-height: 32px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  #offers-form-panel {
+    width: 100%;
+  }
+
+  .offer-form-input {
+    font-size: 16px !important;
+    width: 100%;
+    min-height: 40px;
+  }
+
+  .offer-form-button {
+    padding: 0.65rem 1rem !important;
+    font-size: 0.85rem !important;
+    min-height: 40px !important;
+    width: 100%;
+  }
+
+  .offer-form-button-group {
+    display: flex !important;
+    flex-direction: row !important;
+    gap: 1rem !important;
+  }
+
+  .offer-form-button-group button {
+    flex: 1 !important;
+  }
+}
+
+@media (max-width: 480px) {
+  #offers-container {
+    gap: 0.75rem !important;
+    padding: 0.5rem !important;
+    margin: 0 !important;
+  }
+
+  .offer-card {
+    padding: 0.5rem !important;
+  }
+
+  .offer-card img {
+    width: 50px !important;
+    height: 50px !important;
+  }
+
+  .offer-card-info p {
+    font-size: 0.7rem !important;
+  }
+
+  .offer-card-actions button svg {
+    width: 12px !important;
+    height: 12px !important;
+  }
+
+  .offer-form-input {
+    font-size: 16px !important;
+    padding: 0.6rem !important;
+    min-height: 40px !important;
+    width: 100%;
+  }
+
+  .offer-form-button {
+    padding: 0.65rem 1rem !important;
+    font-size: 0.8rem !important;
+    min-height: 40px !important;
+  }
+
+  .offer-form-button-group {
+    flex-direction: column !important;
+    gap: 0.5rem !important;
+  }
+
+  .offer-form-button-group button {
+    width: 100% !important;
+  }
+}
+
+/* ==================== OFFER SCROLLER PAGE RESPONSIVE ==================== */
+
+@media (max-width: 768px) {
+  .scroller-input {
+    font-size: 16px !important;
+    width: 100%;
+    min-height: 40px;
+    padding: 0.75rem !important;
+  }
+
+  .scroller-preview {
+    height: 50px !important;
+    padding: 0.75rem 0 !important;
+    font-size: 0.75rem !important;
+  }
+
+  .scroller-preview p {
+    font-size: 0.75rem !important;
+  }
+
+  .scroller-button-group {
+    display: flex !important;
+    flex-direction: row !important;
+    gap: 0.75rem !important;
+    justify-content: flex-end !important;
+  }
+
+  .scroller-button {
+    padding: 0.6rem 1rem !important;
+    font-size: 0.8rem !important;
+    min-height: 40px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .scroller-input {
+    font-size: 16px !important;
+    padding: 0.6rem !important;
+    min-height: 40px !important;
+    width: 100%;
+  }
+
+  .scroller-preview {
+    height: 45px !important;
+    padding: 0.5rem 0 !important;
+  }
+
+  .scroller-preview p {
+    font-size: 0.65rem !important;
+  }
+
+  .scroller-button-group {
+    flex-direction: column !important;
+    gap: 0.5rem !important;
+  }
+
+  .scroller-button {
+    width: 100% !important;
+    padding: 0.65rem 1rem !important;
+    font-size: 0.75rem !important;
+    min-height: 40px !important;
+  }
+}
+
+/* ==================== ACCOUNT MANAGEMENT PAGE RESPONSIVE ==================== */
+
+@media (max-width: 1023px) {
+  #account-container {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 1.5rem !important;
+  }
+
+  .account-form-panel {
+    order: -1;
+    width: 100%;
+  }
+}
+
+@media (max-width: 768px) {
+  .account-form-group {
+    margin-bottom: 1rem !important;
+  }
+
+  .account-form-input {
+    font-size: 16px !important;
+    width: 100%;
+    min-height: 40px;
+  }
+
+  .account-form-button {
+    padding: 0.65rem 1rem !important;
+    font-size: 0.85rem !important;
+    min-height: 40px !important;
+    width: 100% !important;
+  }
+
+  .account-item {
+    padding: 0.75rem !important;
+    gap: 0.75rem !important;
+  }
+
+  .account-item-info {
+    flex: 1;
+  }
+
+  .account-item-info-name {
+    font-size: 0.9rem !important;
+    font-weight: 600 !important;
+    margin: 0 !important;
+  }
+
+  .account-item-info-email {
+    font-size: 0.75rem !important;
+    margin: 0.25rem 0 0 0 !important;
+  }
+
+  .account-item-role {
+    padding: 2px 6px !important;
+    font-size: 0.6rem !important;
+    margin-top: 4px !important;
+  }
+
+  .account-item-delete {
+    padding: 0.4rem !important;
+    min-width: 32px !important;
+    min-height: 32px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+}
+
+@media (max-width: 480px) {
+  #account-container {
+    gap: 0.75rem !important;
+    padding: 0.5rem !important;
+  }
+
+  .account-form-group {
+    margin-bottom: 0.75rem !important;
+  }
+
+  .account-form-input {
+    font-size: 16px !important;
+    padding: 0.6rem !important;
+    min-height: 40px !important;
+    width: 100%;
+  }
+
+  .account-form-button {
+    padding: 0.65rem 1rem !important;
+    font-size: 0.8rem !important;
+    min-height: 40px !important;
+    margin-top: 0.75rem !important;
+  }
+
+  .account-item {
+    padding: 0.5rem !important;
+  }
+
+  .account-item-info-name {
+    font-size: 0.8rem !important;
+  }
+
+  .account-item-info-email {
+    font-size: 0.65rem !important;
+  }
+
+  .account-item-delete svg {
+    width: 14px !important;
+    height: 14px !important;
+  }
+}
+
 /* ==================== CONTENT MANAGEMENT STYLES ==================== */
 .admin-panel .content-management {
   max-width: 1200px;
@@ -3493,4 +4319,170 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+/* ==================== HERO SECTION MANAGEMENT RESPONSIVE ==================== */
+
+/* Mobile responsive for content management section */
+@media (max-width: 768px) {
+  .admin-panel .content-management {
+    padding: 1rem;
+  }
+
+  .admin-panel .content-management h2 {
+    font-size: 1.25rem;
+    margin-bottom: 1rem;
+  }
+
+  .admin-panel .section-container {
+    padding: 1.25rem;
+    margin-bottom: 1.25rem;
+    border-radius: var(--admin-radius-sm);
+  }
+
+  .admin-panel .form-container {
+    gap: 0.75rem;
+  }
+
+  .admin-panel .form-container > div {
+    margin-bottom: 0.25rem;
+  }
+
+  .admin-panel .form-container label {
+    font-size: 0.8125rem;
+    margin-bottom: 0.375rem;
+  }
+
+  .admin-panel .form-container input[type="text"],
+  .admin-panel .form-container input[type="email"],
+  .admin-panel .form-container input[type="tel"],
+  .admin-panel .form-container textarea,
+  .admin-panel .form-container select {
+    padding: 0.625rem;
+    font-size: 0.8125rem;
+  }
+
+  .admin-panel .form-container textarea {
+    min-height: 100px;
+  }
+
+  .admin-panel .form-container .flex {
+    flex-direction: row;
+    gap: 0.5rem;
+    margin-top: 1rem;
+  }
+
+  .admin-panel .form-container .flex button {
+    flex: 1;
+    padding: 0.625rem 1rem !important;
+    font-size: 0.8125rem !important;
+    min-height: 36px;
+  }
+}
+
+@media (max-width: 480px) {
+  .admin-panel .content-management {
+    padding: 0.75rem;
+  }
+
+  .admin-panel .content-management h2 {
+    font-size: 1.125rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .admin-panel .section-container {
+    padding: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .admin-panel .form-container {
+    gap: 0.5rem;
+  }
+
+  .admin-panel .form-container > div {
+    margin-bottom: 0;
+  }
+
+  .admin-panel .form-container label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+  }
+
+  .admin-panel .form-container input[type="text"],
+  .admin-panel .form-container input[type="email"],
+  .admin-panel .form-container input[type="tel"],
+  .admin-panel .form-container textarea,
+  .admin-panel .form-container select {
+    padding: 0.6rem;
+    font-size: 16px;
+    border-radius: 4px;
+    min-height: 40px;
+  }
+
+  .admin-panel .form-container textarea {
+    min-height: 80px;
+  }
+
+  .admin-panel .form-container select {
+    appearance: none;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 0.5rem center;
+    background-size: 1.5em 1.5em;
+    padding-right: 2.5rem;
+  }
+
+  .admin-panel .form-container .flex {
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+  }
+
+  .admin-panel .form-container .flex button {
+    width: 100%;
+    padding: 0.65rem 1rem !important;
+    font-size: 0.8rem !important;
+    min-height: 40px;
+  }
+
+  .admin-panel .file-preview {
+    width: 48px;
+    height: 48px;
+  }
+
+  /* Hero edit heading */
+  #hero h2 {
+    font-size: 1rem !important;
+    margin-bottom: 1rem !important;
+  }
+
+  /* Hero edit button styling on mobile */
+  #hero .btn {
+    width: 100%;
+    padding: 0.65rem 1rem !important;
+    font-size: 0.8rem !important;
+    min-height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+  }
+
+  #hero button svg {
+    width: 16px !important;
+    height: 16px !important;
+  }
+
+  /* Centered button container */
+  #hero > div > div:not(.form-container) {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+  }
+
+  #hero > div > div:not(.form-container) button {
+    width: 100%;
+    max-width: 100%;
+  }
 }

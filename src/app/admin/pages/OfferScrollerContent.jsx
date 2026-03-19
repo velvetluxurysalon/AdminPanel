@@ -78,6 +78,16 @@ const OfferScrollerContent = () => {
   return (
     <div>
       <style>{`
+        .offer-scroller-container {
+          display: grid;
+          gap: 2rem;
+        }
+
+        .offer-scroller-form {
+          display: grid;
+          gap: 2rem;
+        }
+
         @keyframes scroll {
           0% {
             transform: translateX(100%);
@@ -86,14 +96,86 @@ const OfferScrollerContent = () => {
             transform: translateX(-100%);
           }
         }
+        
         .offer-scroll-preview {
           animation: scroll 30s linear infinite;
           display: inline-block;
           white-space: nowrap;
           padding-right: 100%;
         }
+        
         .offer-scroll-preview:hover {
           animation-play-state: paused;
+        }
+
+        @media (max-width: 768px) {
+          .offer-scroller-form {
+            gap: 1.5rem !important;
+          }
+
+          .scroller-input {
+            font-size: 16px !important;
+            width: 100%;
+            min-height: 40px;
+            padding: 0.75rem !important;
+          }
+
+          .scroller-preview {
+            height: 50px !important;
+            padding: 0.75rem 0 !important;
+            font-size: 0.75rem !important;
+          }
+
+          .scroller-preview p {
+            font-size: 0.75rem !important;
+          }
+
+          .scroller-button-group {
+            display: flex !important;
+            flex-direction: row !important;
+            gap: 0.75rem !important;
+            justify-content: flex-end !important;
+          }
+
+          .scroller-button {
+            padding: 0.6rem 1rem !important;
+            font-size: 0.8rem !important;
+            min-height: 40px !important;
+          }
+        }
+
+        @media (max-width: 480px) {
+          .offer-scroller-form {
+            gap: 1rem !important;
+          }
+
+          .scroller-input {
+            font-size: 16px !important;
+            padding: 0.6rem !important;
+            min-height: 40px !important;
+            width: 100%;
+          }
+
+          .scroller-preview {
+            height: 45px !important;
+            padding: 0.5rem 0 !important;
+          }
+
+          .scroller-preview p {
+            font-size: 0.65rem !important;
+          }
+
+          .scroller-button-group {
+            flex-direction: column !important;
+            gap: 0.5rem !important;
+          }
+
+          .scroller-button {
+            width: 100% !important;
+            padding: 0.65rem 1rem !important;
+            font-size: 0.75rem !important;
+            min-height: 40px !important;
+          }
         }
       `}</style>
 
@@ -230,7 +312,7 @@ const OfferScrollerContent = () => {
             <textarea
               value={offerText}
               onChange={(e) => setOfferText(e.target.value)}
-              className="input"
+              className="input scroller-input"
               placeholder="Enter your promotional text... (e.g., 'Get 20% OFF on all services! Use code VELVET20 at checkout.')"
               style={{
                 minHeight: "100px",
@@ -266,6 +348,7 @@ const OfferScrollerContent = () => {
               Live Preview
             </p>
             <div
+              className="scroller-preview"
               style={{
                 backgroundColor: "#c9a227",
                 borderRadius: "var(--admin-radius-sm)",
@@ -375,6 +458,7 @@ const OfferScrollerContent = () => {
 
           {/* Save Button */}
           <div
+            className="scroller-button-group"
             style={{
               display: "flex",
               gap: "0.75rem",
@@ -383,6 +467,7 @@ const OfferScrollerContent = () => {
           >
             <button
               onClick={loadOfferText}
+              className="scroller-button"
               style={{
                 padding: "0.75rem 1.5rem",
                 backgroundColor: "transparent",
@@ -400,6 +485,7 @@ const OfferScrollerContent = () => {
             <button
               onClick={handleSave}
               disabled={isSaving}
+              className="scroller-button"
               style={{
                 padding: "0.75rem 1.5rem",
                 backgroundColor: "var(--admin-primary)",
