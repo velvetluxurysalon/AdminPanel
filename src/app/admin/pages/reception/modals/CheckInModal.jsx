@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import {
   X,
   Search,
@@ -15,9 +15,18 @@ import {
   addCustomer,
   getServices,
   getProducts,
+  getStaff,
+  addVisitItem,
+  updateVisitStatus,
+  addStaffWork,
 } from "../../../utils/firebaseUtils";
 
-const CheckInModal = ({ onClose, onCheckIn }) => {
+const CheckInModal = ({
+  onClose,
+  onCheckIn,
+  mode = "check-in",
+  existingVisit = null,
+}) => {
   const [customers, setCustomers] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCustomer, setSelectedCustomer] = useState(null);
@@ -42,18 +51,25 @@ const CheckInModal = ({ onClose, onCheckIn }) => {
   const [itemSearchTerm, setItemSearchTerm] = useState("");
   const [frequentlyUsedIds, setFrequentlyUsedIds] = useState([]);
 
+  // Staff tracking
+  const [staff, setStaff] = useState([]);
+  const [staffAssignments, setStaffAssignments] = useState({});
+
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const [allCustomers, servicesData, productsData] = await Promise.all([
-          getCustomers(true),
-          getServices(false),
-          getProducts(),
-        ]);
+        const [allCustomers, servicesData, productsData, staffData] =
+          await Promise.all([
+            getCustomers(true),
+            getServices(false),
+            getProducts(),
+            getStaff(),
+          ]);
         setCustomers(allCustomers || []);
         setServices(servicesData || []);
         setProducts(productsData || []);
+        setStaff(staffData || []);
 
         // Load frequently used services
         const storedFrequent = localStorage.getItem("frequentlyUsedServices");
@@ -75,6 +91,16 @@ const CheckInModal = ({ onClose, onCheckIn }) => {
     fetchData();
   }, []);
 
+  // Initialize customer and search term when opening in "add-items" mode
+  useEffect(() => {
+    if (mode === "add-items" && existingVisit?.customer) {
+      // Pre-populate the customer details
+      setSelectedCustomer(existingVisit.customer);
+      setSearchTerm(existingVisit.customer.name || "");
+      setShowDropdown(false);
+    }
+  }, [mode, existingVisit]);
+
   const filteredCustomers = customers.filter(
     (customer) =>
       customer.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -86,6 +112,20 @@ const CheckInModal = ({ onClose, onCheckIn }) => {
     setSelectedCustomer(customer);
     setSearchTerm(customer.name || "");
     setShowDropdown(false);
+  };
+
+  // Helper function to parse staff data (handles both JSON string and object)
+  const parseStaffData = (staffData) => {
+    if (!staffData) return null;
+    if (typeof staffData === "string") {
+      try {
+        return JSON.parse(staffData);
+      } catch (e) {
+        console.error("Error parsing staff data:", e);
+        return null;
+      }
+    }
+    return staffData;
   };
 
   const trackServiceUsage = (serviceId) => {
@@ -120,7 +160,8 @@ const CheckInModal = ({ onClose, onCheckIn }) => {
   };
 
   const handleCheckIn = async () => {
-    if (!selectedCustomer) {
+    // For add-items mode, skip customer validation
+    if (mode === "check-in" && !selectedCustomer) {
       setError("Please select a customer");
       return;
     }
@@ -133,17 +174,79 @@ const CheckInModal = ({ onClose, onCheckIn }) => {
     try {
       setLoading(true);
 
-      // Create items array
+      // Handle add-items mode (adding to existing visit)
+      if (mode === "add-items" && existingVisit) {
+        // Add items to existing visit with staff assignments
+        for (const service of selectedServices) {
+          const serviceIndex = selectedServices.indexOf(service);
+          const staffData = parseStaffData(
+            staffAssignments[`service-${serviceIndex}`],
+          );
+          await addVisitItem(existingVisit.id, {
+            type: "service",
+            serviceId: service.id,
+            name: service.name,
+            price: service.price,
+            duration: service.duration || 30,
+            quantity: 1,
+            staff: staffData,
+            status: "pending",
+            checkInTime: new Date().toISOString(),
+          });
+
+          // Track staff work if staff is assigned
+          if (staffData && staffData.id) {
+            await addStaffWork(
+              staffData,
+              existingVisit.id,
+              existingVisit.customerId,
+              existingVisit.customer?.name || "Unknown",
+              service.name,
+              service.id,
+              service.price,
+              service.duration || 30,
+            );
+          }
+        }
+
+        for (const product of selectedProducts) {
+          await addVisitItem(existingVisit.id, {
+            type: "product",
+            productId: product.id,
+            name: product.name,
+            price: product.price,
+            quantity: 1,
+            status: "added",
+          });
+        }
+
+        // Ensure visit status is correct
+        if (
+          existingVisit.status !== "READY_FOR_BILLING" &&
+          existingVisit.status !== "COMPLETED"
+        ) {
+          await updateVisitStatus(existingVisit.id, "READY_FOR_BILLING");
+        }
+
+        setError("");
+        onCheckIn();
+        onClose();
+        return;
+      }
+
+      // Original check-in mode (new customer check-in)
+      // Create items array with staff assignments
       const items = [
-        ...selectedServices.map((service) => ({
+        ...selectedServices.map((service, index) => ({
           type: "service",
           serviceId: service.id,
           name: service.name,
           price: service.price,
           duration: service.duration || 30,
           quantity: 1,
-          staff: null,
+          staff: parseStaffData(staffAssignments[`service-${index}`]),
           status: "pending",
+          checkInTime: new Date().toISOString(),
         })),
         ...selectedProducts.map((product) => ({
           type: "product",
@@ -155,7 +258,7 @@ const CheckInModal = ({ onClose, onCheckIn }) => {
         })),
       ];
 
-      await createVisit({
+      const visitId = await createVisit({
         customerId: selectedCustomer.id,
         customer: {
           id: selectedCustomer.id,
@@ -168,11 +271,32 @@ const CheckInModal = ({ onClose, onCheckIn }) => {
         notes: "",
       });
 
+      // Track staff work for each service with assigned staff
+      for (const service of selectedServices) {
+        const serviceIndex = selectedServices.indexOf(service);
+        const staffData = parseStaffData(
+          staffAssignments[`service-${serviceIndex}`],
+        );
+
+        if (staffData && staffData.id) {
+          await addStaffWork(
+            staffData,
+            visitId,
+            selectedCustomer.id,
+            selectedCustomer.name || "Unknown",
+            service.name,
+            service.id,
+            service.price,
+            service.duration || 30,
+          );
+        }
+      }
+
       setError("");
       onCheckIn();
       onClose();
     } catch (err) {
-      setError("Failed to check in customer: " + err.message);
+      setError("Failed to process checkIn: " + err.message);
       console.error(err);
     } finally {
       setLoading(false);
@@ -351,7 +475,7 @@ const CheckInModal = ({ onClose, onCheckIn }) => {
                 color: "#111827",
               }}
             >
-              New Check-In
+              {mode === "add-items" ? "Add More Services" : "New Check-In"}
             </h2>
             <p
               style={{
@@ -361,7 +485,9 @@ const CheckInModal = ({ onClose, onCheckIn }) => {
                 marginTop: "2px",
               }}
             >
-              Select customer and services
+              {mode === "add-items"
+                ? `Add services to ${existingVisit?.customer?.name}`
+                : "Select customer and services"}
             </p>
           </div>
           <button
@@ -419,7 +545,10 @@ const CheckInModal = ({ onClose, onCheckIn }) => {
                     padding: "0.5rem 0.75rem",
                     border: "1px solid #d1d5db",
                     borderRadius: "0.5rem",
-                    background: "white",
+                    background:
+                      mode === "add-items" && selectedCustomer
+                        ? "#f0fdf4"
+                        : "white",
                   }}
                 >
                   <Search size={14} color="#9ca3af" />
@@ -428,17 +557,26 @@ const CheckInModal = ({ onClose, onCheckIn }) => {
                     placeholder="Name or phone..."
                     value={searchTerm}
                     onChange={(e) => {
-                      setSearchTerm(e.target.value);
-                      setShowDropdown(true);
-                      setSelectedCustomer(null);
+                      if (mode !== "add-items") {
+                        setSearchTerm(e.target.value);
+                        setShowDropdown(true);
+                        setSelectedCustomer(null);
+                      }
                     }}
-                    onFocus={() => setShowDropdown(true)}
+                    onFocus={() => {
+                      if (mode !== "add-items") {
+                        setShowDropdown(true);
+                      }
+                    }}
+                    readOnly={mode === "add-items"}
                     style={{
                       flex: 1,
                       border: "none",
                       outline: "none",
                       fontSize: "0.8125rem",
                       fontFamily: "inherit",
+                      background: "transparent",
+                      cursor: mode === "add-items" ? "default" : "text",
                     }}
                   />
                 </div>
@@ -498,7 +636,8 @@ const CheckInModal = ({ onClose, onCheckIn }) => {
 
                 {showDropdown &&
                   filteredCustomers.length === 0 &&
-                  searchTerm && (
+                  searchTerm &&
+                  mode !== "add-items" && (
                     <div
                       style={{
                         position: "absolute",
@@ -548,7 +687,7 @@ const CheckInModal = ({ onClose, onCheckIn }) => {
               </div>
 
               {/* New Customer Form */}
-              {showNewCustomerForm && (
+              {showNewCustomerForm && mode !== "add-items" && (
                 <div
                   style={{
                     marginTop: "0.75rem",
@@ -709,6 +848,54 @@ const CheckInModal = ({ onClose, onCheckIn }) => {
                 </div>
               )}
 
+              {/* Existing Items in Visit - Show only in add-items mode */}
+              {mode === "add-items" &&
+                existingVisit?.items &&
+                existingVisit.items.length > 0 && (
+                  <div style={{ marginTop: "0.75rem" }}>
+                    <p
+                      style={{
+                        margin: "0 0 0.35rem 0",
+                        fontSize: "0.7rem",
+                        fontWeight: "600",
+                        color: "#8b5cf6",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.5px",
+                      }}
+                    >
+                      Already in Visit ({existingVisit.items.length})
+                    </p>
+                    <div
+                      style={{
+                        maxHeight: "150px",
+                        overflowY: "auto",
+                        opacity: 0.75,
+                      }}
+                    >
+                      {existingVisit.items.map((item, i) => (
+                        <div
+                          key={`existing-${i}`}
+                          style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            padding: "0.3rem 0",
+                            borderBottom: "1px solid #f3f4f6",
+                            fontSize: "0.75rem",
+                            color: "#6b7280",
+                          }}
+                        >
+                          <span>
+                            {item.name || item.serviceName || item.productName}
+                          </span>
+                          <span style={{ fontWeight: "600" }}>
+                            ₹{item.price}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
               {/* Selected Items Summary */}
               {selectedServices.length + selectedProducts.length > 0 && (
                 <div style={{ marginTop: "0.75rem" }}>
@@ -725,16 +912,21 @@ const CheckInModal = ({ onClose, onCheckIn }) => {
                     Selected (
                     {selectedServices.length + selectedProducts.length})
                   </p>
-                  <div style={{ maxHeight: "130px", overflowY: "auto" }}>
-                    {[...selectedServices, ...selectedProducts].map(
-                      (item, i) => (
+                  <div style={{ maxHeight: "180px", overflowY: "auto" }}>
+                    {selectedServices.map((item, i) => (
+                      <div
+                        key={`service-${i}`}
+                        style={{
+                          borderBottom: "1px solid #f3f4f6",
+                          paddingBottom: "0.5rem",
+                          marginBottom: "0.5rem",
+                        }}
+                      >
                         <div
-                          key={i}
                           style={{
                             display: "flex",
                             justifyContent: "space-between",
-                            padding: "0.3rem 0",
-                            borderBottom: "1px solid #f3f4f6",
+                            pady: "0.3rem 0",
                             fontSize: "0.775rem",
                           }}
                         >
@@ -748,8 +940,58 @@ const CheckInModal = ({ onClose, onCheckIn }) => {
                             ₹{item.price}
                           </span>
                         </div>
-                      ),
-                    )}
+                        <select
+                          value={staffAssignments[`service-${i}`] || ""}
+                          onChange={(e) =>
+                            setStaffAssignments({
+                              ...staffAssignments,
+                              [`service-${i}`]: e.target.value,
+                            })
+                          }
+                          style={{
+                            width: "100%",
+                            marginTop: "0.3rem",
+                            padding: "0.25rem 0.35rem",
+                            border: "1px solid #d1d5db",
+                            borderRadius: "0.3rem",
+                            fontSize: "0.7rem",
+                            fontFamily: "inherit",
+                            background: staffAssignments[`service-${i}`]
+                              ? "#f0fdf4"
+                              : "white",
+                          }}
+                        >
+                          <option value="">— Select Staff —</option>
+                          {staff.map((s) => (
+                            <option key={s.id} value={JSON.stringify(s)}>
+                              {s.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    ))}
+                    {selectedProducts.map((item, i) => (
+                      <div
+                        key={`product-${i}`}
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          padding: "0.3rem 0",
+                          borderBottom: "1px solid #f3f4f6",
+                          fontSize: "0.775rem",
+                        }}
+                      >
+                        <span style={{ color: "#374151" }}>{item.name}</span>
+                        <span
+                          style={{
+                            color: "#111827",
+                            fontWeight: "600",
+                          }}
+                        >
+                          ₹{item.price}
+                        </span>
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}

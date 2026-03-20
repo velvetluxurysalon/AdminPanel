@@ -28,6 +28,8 @@ import Staff from "./pages/Staff";
 // @ts-ignore
 import StaffSalaryAnalytics from "./pages/StaffSalaryAnalytics";
 // @ts-ignore
+import StaffWorkAnalytics from "./pages/StaffWorkAnalytics";
+// @ts-ignore
 import Products from "./pages/Products";
 // @ts-ignore
 import Loyalty from "./pages/Loyalty";
@@ -137,6 +139,11 @@ const DashboardLayout = () => {
     { path: "/admin/services", icon: Scissors, label: "Services" },
     { path: "/admin/staff", icon: UserCog, label: "Staff" },
     { path: "/admin/salary-analytics", icon: DollarSign, label: "Payroll" },
+    {
+      path: "/admin/staff-work-analytics",
+      icon: BarChart3,
+      label: "Staff Work",
+    },
     { path: "/admin/products", icon: Package, label: "Inventory" },
     { path: "/admin/customers", icon: Users, label: "Customers" },
     { path: "/admin/attendance", icon: Clock, label: "Attendance" },
@@ -412,6 +419,10 @@ const DashboardLayout = () => {
               <Route
                 path="/salary-analytics"
                 element={<StaffSalaryAnalytics />}
+              />
+              <Route
+                path="/staff-work-analytics"
+                element={<StaffWorkAnalytics />}
               />
               <Route path="/customers" element={<Customers />} />
               <Route path="/billing" element={<Billing />} />

@@ -317,12 +317,21 @@ const CheckoutModal = ({
       const redemptionRate = globalPointsSettings?.redemptionRate || 20;
 
       // Deduct points if used as discount
-      if (discountType === "coins" && coinsUsed) {
-        pointsDeducted = Math.floor(parseFloat(coinsUsed) || 0);
-        if (pointsDeducted > availableLoyaltyPoints) {
-          throw new Error(
-            `Insufficient loyalty points. Available: ${availableLoyaltyPoints}, Requested: ${pointsDeducted}`,
-          );
+      if (discountType === "coins") {
+        const parsedCoins = parseFloat(coinsUsed) || 0;
+        if (parsedCoins > 0) {
+          pointsDeducted = Math.floor(parsedCoins);
+          if (pointsDeducted > availableLoyaltyPoints) {
+            throw new Error(
+              `Insufficient loyalty points. Available: ${availableLoyaltyPoints}, Requested: ${pointsDeducted}`,
+            );
+          }
+          console.log("💰 [Points Deduction] Preparing to deduct points:", {
+            pointsDeducted,
+            availableLoyaltyPoints,
+            coinsUsed,
+            customerId,
+          });
         }
       }
 
@@ -463,6 +472,16 @@ const CheckoutModal = ({
 
       // Update customer with new loyalty points
       try {
+        console.log("💳 [Customer Update] Starting update with:", {
+          customerId,
+          finalLoyaltyPoints,
+          pointsDeducted,
+          pointsEarned,
+          currentPoints,
+          updatedTotalSpent,
+          updatedTotalVisits,
+        });
+
         await updateDocument("customers", customerId, {
           loyaltyPoints: finalLoyaltyPoints,
           totalSpent: parseFloat(updatedTotalSpent.toFixed(2)),
@@ -471,6 +490,12 @@ const CheckoutModal = ({
 
         // Verify the update was successful
         const verifyCustomer = await getDocument("customers", customerId);
+        console.log("💳 [Customer Update] Verification result:", {
+          expectedPoints: finalLoyaltyPoints,
+          actualPoints: verifyCustomer.loyaltyPoints,
+          matches: verifyCustomer.loyaltyPoints === finalLoyaltyPoints,
+        });
+
         if (verifyCustomer.loyaltyPoints !== finalLoyaltyPoints) {
           console.error(
             "✗ [Points Update] Verification failed! Points not updated correctly:",
@@ -478,15 +503,24 @@ const CheckoutModal = ({
               expected: finalLoyaltyPoints,
               actual: verifyCustomer.loyaltyPoints,
               customerId,
+              pointsDeducted,
+              pointsEarned,
+              currentPoints,
             },
           );
-          throw new Error("Loyalty points update verification failed");
+          throw new Error(
+            `Loyalty points update verification failed. Expected ${finalLoyaltyPoints}, but got ${verifyCustomer.loyaltyPoints}`,
+          );
         }
 
-        console.log("✓ [Points Update] Successfully verified:", {
-          finalLoyaltyPoints,
-          verifyPoints: verifyCustomer.loyaltyPoints,
-        });
+        console.log(
+          "✓ [Points Update] Successfully verified - Points reduced by:",
+          {
+            pointsDeducted,
+            previousBalance: currentPoints,
+            newBalance: finalLoyaltyPoints,
+          },
+        );
       } catch (updateError) {
         console.error(
           "✗ [Points Update] Failed to update customer:",
@@ -1512,7 +1546,10 @@ const CheckoutModal = ({
                     style={{
                       width: "100%",
                       padding: "0.5rem 0.625rem",
-                      border: "1px solid #d1d5db",
+                      border:
+                        discountType === "coins" && coinsUsed === ""
+                          ? "1px solid #fca5a5"
+                          : "1px solid #d1d5db",
                       borderRadius: "0.375rem",
                       fontSize: "0.8125rem",
                       fontFamily: "inherit",
@@ -1528,8 +1565,22 @@ const CheckoutModal = ({
                   >
                     Available:{" "}
                     <b style={{ color: "#111827" }}>{availableLoyaltyPoints}</b>{" "}
-                    pts ? ₹{(parseFloat(coinsUsed) || 0) / 20} discount
+                    pts → ₹{(parseFloat(coinsUsed) || 0) / 20} discount
                   </div>
+                  {coinsUsed === "" && (
+                    <div
+                      style={{
+                        fontSize: "0.7rem",
+                        color: "#dc2626",
+                        marginTop: "0.25rem",
+                        background: "#fef2f2",
+                        padding: "0.35rem 0.5rem",
+                        borderRadius: "0.3rem",
+                      }}
+                    >
+                      ⚠️ Enter points amount to redeem
+                    </div>
+                  )}
                 </div>
               )}
               {discountType === "coupon" && (
@@ -1811,22 +1862,41 @@ const CheckoutModal = ({
               </button>
               <button
                 onClick={handleCompletePayment}
+                disabled={discountType === "coins" && !coinsUsed}
                 style={{
                   flex: 2,
                   padding: "0.6rem",
-                  background: "#111827",
-                  color: "white",
+                  background:
+                    discountType === "coins" && !coinsUsed
+                      ? "#e5e7eb"
+                      : "#111827",
+                  color:
+                    discountType === "coins" && !coinsUsed
+                      ? "#9ca3af"
+                      : "white",
                   border: "none",
                   borderRadius: "0.5rem",
                   fontWeight: "600",
                   fontSize: "0.8125rem",
-                  cursor: "pointer",
+                  cursor:
+                    discountType === "coins" && !coinsUsed
+                      ? "not-allowed"
+                      : "pointer",
                 }}
-                onMouseEnter={(e) =>
-                  (e.currentTarget.style.background = "#1f2937")
-                }
-                onMouseLeave={(e) =>
-                  (e.currentTarget.style.background = "#111827")
+                onMouseEnter={(e) => {
+                  if (!(discountType === "coins" && !coinsUsed)) {
+                    e.currentTarget.style.background = "#1f2937";
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!(discountType === "coins" && !coinsUsed)) {
+                    e.currentTarget.style.background = "#111827";
+                  }
+                }}
+                title={
+                  discountType === "coins" && !coinsUsed
+                    ? "Please enter points amount to redeem"
+                    : "Complete payment"
                 }
               >
                 ✓ Complete Payment

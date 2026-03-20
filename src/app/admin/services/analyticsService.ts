@@ -382,10 +382,22 @@ export const getStaffPerformance = async (
     visits.forEach((visit: any) => {
       (visit.items || []).forEach((item: any) => {
         if (item.staff) {
-          const staffId = item.staff.id || item.staff;
+          // Handle both string and object formats for staff data
+          let staffData = item.staff;
+          if (typeof staffData === "string") {
+            try {
+              staffData = JSON.parse(staffData);
+            } catch (e) {
+              console.warn("Could not parse staff data:", item.staff);
+              return; // Skip this item if we can't parse the staff data
+            }
+          }
+
+          const staffId = staffData.id || staffData;
+          const staffName = staffData.name || staffData;
           const current = staffMap.get(staffId) || {
             staffId,
-            staffName: item.staff.name || item.staff,
+            staffName,
             totalServices: 0,
             totalRevenue: 0,
             averageServiceValue: 0,

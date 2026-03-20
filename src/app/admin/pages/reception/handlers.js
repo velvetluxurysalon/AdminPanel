@@ -8,6 +8,7 @@ import {
   checkInAppointment,
   deleteDocument,
   getDocument,
+  completeStaffWork,
 } from "../../utils/firebaseUtils";
 import { calculateTotals } from "./utils";
 import {
@@ -229,9 +230,44 @@ export const handleCompletePayment = async (
 
     // ⚡ CRITICAL OPERATIONS (must await):
     // 1. Create invoice in database
-    await createInvoice(invoiceData);
+    const invoiceId = await createInvoice(invoiceData);
 
-    // 2. Update visit status to COMPLETED immediately
+    // 2. Complete staff work for all staff members who worked on this visit
+    // Get the visit to find all staff members
+    const visit = await getDocument("visits", invoiceData.visitId);
+    if (visit && visit.items) {
+      const staffIds = new Set(); // Track unique staff IDs
+      visit.items.forEach((item) => {
+        if (item.staff) {
+          let staffData = item.staff;
+          if (typeof staffData === "string") {
+            try {
+              staffData = JSON.parse(staffData);
+            } catch (e) {
+              console.warn("Could not parse staff data:", item.staff);
+              return;
+            }
+          }
+          if (staffData.id) {
+            staffIds.add(staffData.id);
+          }
+        }
+      });
+
+      // Call completeStaffWork for each unique staff member
+      for (const staffId of staffIds) {
+        try {
+          await completeStaffWork(invoiceId, invoiceData.visitId, staffId);
+        } catch (err) {
+          console.warn(
+            `Warning: Could not complete staff work for staff ${staffId}:`,
+            err,
+          );
+        }
+      }
+    }
+
+    // 3. Update visit status to COMPLETED immediately
     // This is the most important operation for UI responsiveness
     await updateVisit(invoiceData.visitId, {
       paidAmount: parseFloat(invoiceData.paidAmount) || 0,

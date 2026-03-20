@@ -3198,6 +3198,209 @@ export const getInvoicesByDateRange = async (startDate, endDate) => {
   }
 };
 
+// ============================================
+// STAFF WORK TRACKING (Using Subcollections)
+// ============================================
+
+/**
+ * Add a work record to staff/staffId/works subcollection when service is assigned during check-in
+ * Stores work with status "pending"
+ */
+export const addStaffWork = async (
+  staffData,
+  visitId,
+  customerId,
+  customerName,
+  serviceName,
+  serviceId,
+  price,
+  duration,
+) => {
+  try {
+    if (!staffData || !staffData.id) {
+      console.warn("Staff data missing, skipping work record");
+      return;
+    }
+
+    const staffId = staffData.id;
+    const staff = await getDocument("staff", staffId);
+
+    if (!staff) {
+      console.warn("Staff not found:", staffId);
+      return;
+    }
+
+    const workId = `${visitId}-${serviceId}-${Date.now()}`;
+    const newWork = {
+      visitId: visitId,
+      customerId: customerId,
+      customerName: customerName,
+      serviceName: serviceName,
+      serviceId: serviceId,
+      price: price,
+      duration: duration || 0,
+      status: "pending", // Will be updated to "completed" during checkout
+      invoiceId: null,
+      addedAt: Timestamp.now(),
+      completedAt: null,
+    };
+
+    // Add work to subcollection: staff/{staffId}/works/{workId}
+    const workRef = doc(db, "staff", staffId, "works", workId);
+    await setDoc(workRef, newWork);
+
+    // Update staff document with totalVisits and lastWorkDate
+    await updateDocument("staff", staffId, {
+      totalVisits: (staff.totalVisits || 0) + 1,
+      lastWorkDate: Timestamp.now(),
+    });
+
+    console.log(`✅ Work added for staff ${staffData.name}:`, newWork);
+  } catch (error) {
+    console.error("Error adding staff work:", error);
+    throw error;
+  }
+};
+
+/**
+ * Complete staff work when invoice is created during checkout
+ * Updates work status to "completed" and adds invoiceId in the subcollection
+ */
+export const completeStaffWork = async (invoiceId, visitId, staffId) => {
+  try {
+    if (!staffId) {
+      console.warn("Staff ID missing, skipping work completion");
+      return;
+    }
+
+    const staff = await getDocument("staff", staffId);
+    if (!staff) {
+      console.warn("Staff not found:", staffId);
+      return;
+    }
+
+    // Query works subcollection to find the work with this visitId
+    const worksQuery = query(
+      collection(db, "staff", staffId, "works"),
+      where("visitId", "==", visitId),
+    );
+
+    const worksSnapshot = await getDocs(worksQuery);
+
+    if (!worksSnapshot.empty) {
+      // Update the first matching work document
+      const workDoc = worksSnapshot.docs[0];
+      await updateDoc(workDoc.ref, {
+        status: "completed",
+        invoiceId: invoiceId,
+        completedAt: Timestamp.now(),
+      });
+
+      console.log(
+        `✅ Work completed for staff ${staff.name}, Invoice: ${invoiceId}`,
+      );
+    } else {
+      console.warn("Work not found for visit:", visitId);
+    }
+  } catch (error) {
+    console.error("Error completing staff work:", error);
+    throw error;
+  }
+};
+
+/**
+ * Get all works for a staff member for analytics/reporting
+ * Retrieves from staff/{staffId}/works subcollection
+ * Supports filtering by date range or status
+ */
+export const getStaffAllWorks = async (
+  staffId,
+  startDate = null,
+  endDate = null,
+) => {
+  try {
+    const staff = await getDocument("staff", staffId);
+    if (!staff) {
+      return {
+        totalWorks: 0,
+        totalRevenue: 0,
+        completedCount: 0,
+        pendingCount: 0,
+        works: [],
+      };
+    }
+
+    // Query all works from subcollection
+    const worksQuery = query(
+      collection(db, "staff", staffId, "works"),
+      orderBy("addedAt", "desc"),
+    );
+
+    const worksSnapshot = await getDocs(worksQuery);
+    let works = worksSnapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
+
+    // Filter by date range if provided
+    if (startDate && endDate) {
+      works = works.filter((work) => {
+        const workDate = work.addedAt?.toDate?.() || work.addedAt;
+        return workDate >= startDate && workDate <= endDate;
+      });
+    }
+
+    // Calculate stats
+    const totalWorks = works.length;
+    const totalRevenue = works.reduce((sum, w) => sum + (w.price || 0), 0);
+    const completedCount = works.filter((w) => w.status === "completed").length;
+    const pendingCount = works.filter((w) => w.status === "pending").length;
+
+    return {
+      staffName: staff.name,
+      staffRole: staff.role || "Staff",
+      totalWorks,
+      totalRevenue: parseFloat(totalRevenue.toFixed(2)),
+      completedCount,
+      pendingCount,
+      averageServiceValue:
+        totalWorks > 0 ? parseFloat((totalRevenue / totalWorks).toFixed(2)) : 0,
+      completionRate:
+        totalWorks > 0
+          ? parseFloat(((completedCount / totalWorks) * 100).toFixed(2))
+          : 0,
+      works: works,
+    };
+  } catch (error) {
+    console.error("Error getting staff works:", error);
+    throw error;
+  }
+};
+
+/**
+ * Get all staff works for analytics across all staff members
+ * Retrieves from all staff members' works subcollections
+ */
+export const getAllStaffWorks = async (startDate = null, endDate = null) => {
+  try {
+    const staffList = await getStaff();
+    const allWorks = [];
+
+    for (const staff of staffList) {
+      const staffWorks = await getStaffAllWorks(staff.id, startDate, endDate);
+      if (staffWorks.totalWorks > 0) {
+        allWorks.push(staffWorks);
+      }
+    }
+
+    // Sort by total revenue descending
+    return allWorks.sort((a, b) => b.totalRevenue - a.totalRevenue);
+  } catch (error) {
+    console.error("Error getting all staff works:", error);
+    throw error;
+  }
+};
+
 export const getCustomerInvoiceHistory = async (customerId) => {
   try {
     const invoices = await getInvoices();

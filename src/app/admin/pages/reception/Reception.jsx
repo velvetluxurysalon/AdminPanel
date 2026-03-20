@@ -33,6 +33,8 @@ const ReceptionComponent = () => {
     useState(null);
   const [showBirthdayDetailsModal, setShowBirthdayDetailsModal] =
     useState(false);
+  const [showCheckInForAddItems, setShowCheckInForAddItems] = useState(false);
+  const [visitForAddItems, setVisitForAddItems] = useState(null);
 
   useEffect(() => {
     const loadBirthdays = async () => {
@@ -313,13 +315,11 @@ const ReceptionComponent = () => {
                 )
               }
               onAddItems={(visit) =>
-                handleAddItemsClick(
-                  visit,
-                  uiState.setSelectedVisit,
-                  uiState.setSelectedServices,
-                  uiState.setSelectedProducts,
-                  uiState.setShowAddItems,
-                )
+                // Instead of showing AddItemsModal, show CheckInModal for adding items with staff selection
+                (() => {
+                  setVisitForAddItems(visit);
+                  setShowCheckInForAddItems(true);
+                })()
               }
               onReadyForCheckout={(visit) =>
                 handleReadyForCheckout(
@@ -387,7 +387,7 @@ const ReceptionComponent = () => {
 
       {/* MODALS */}
 
-      {/* CHECK-IN MODAL */}
+      {/* CHECK IN MODAL - For new check-ins */}
       {uiState.showCheckIn && (
         <CheckInModal
           onClose={() => uiState.setShowCheckIn(false)}
@@ -398,6 +398,23 @@ const ReceptionComponent = () => {
               uiState.setActiveSection,
             )
           }
+        />
+      )}
+
+      {/* CHECK IN MODAL - For adding items to existing visit */}
+      {showCheckInForAddItems && visitForAddItems && (
+        <CheckInModal
+          mode="add-items"
+          existingVisit={visitForAddItems}
+          onClose={() => {
+            setShowCheckInForAddItems(false);
+            setVisitForAddItems(null);
+          }}
+          onCheckIn={() => {
+            dataState.fetchAllData();
+            setShowCheckInForAddItems(false);
+            setVisitForAddItems(null);
+          }}
         />
       )}
 

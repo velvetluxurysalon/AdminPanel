@@ -32,14 +32,27 @@ const StaffSalaryAnalytics = () => {
   const [error, setError] = useState("");
   const [viewMode, setViewMode] = useState("detail"); // 'detail' or 'overview'
   const [searchTerm, setSearchTerm] = useState("");
+  const [workData, setWorkData] = useState(null);
+  const [invoices, setInvoices] = useState([]);
 
   useEffect(() => {
     fetchStaff();
+    fetchInvoices();
   }, []);
+
+  const fetchInvoices = async () => {
+    try {
+      const data = await getDocuments("invoices");
+      setInvoices(data || []);
+    } catch (err) {
+      console.error("Error fetching invoices:", err);
+    }
+  };
 
   useEffect(() => {
     if (selectedStaff) {
       calculateSalaryData(selectedStaff);
+      calculateWorkData(selectedStaff);
     }
   }, [selectedStaff, monthYear]);
 
@@ -191,6 +204,65 @@ const StaffSalaryAnalytics = () => {
       setError("Failed to calculate salary");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const calculateWorkData = (staffMember) => {
+    try {
+      const [year, month] = monthYear.split("-");
+      const workServices = [];
+      let totalServices = 0;
+      let totalEarnings = 0;
+
+      invoices.forEach((invoice) => {
+        const invoiceDate = invoice.timestamp?.toDate?.()
+          ? new Date(invoice.timestamp.toDate())
+          : new Date(invoice.timestamp);
+
+        const invoiceYear = invoiceDate.getFullYear().toString();
+        const invoiceMonth = String(invoiceDate.getMonth() + 1).padStart(
+          2,
+          "0",
+        );
+
+        if (invoiceYear === year && invoiceMonth === month) {
+          if (invoice.items && Array.isArray(invoice.items)) {
+            invoice.items.forEach((item) => {
+              if (item.type === "service" && item.staff) {
+                try {
+                  const staffData =
+                    typeof item.staff === "string"
+                      ? JSON.parse(item.staff)
+                      : item.staff;
+                  const staffName = staffData.name || "Unknown";
+
+                  if (staffName === staffMember.name) {
+                    workServices.push({
+                      serviceName: item.name,
+                      amount: item.price,
+                      date: invoiceDate,
+                      invoiceId: invoice.invoiceId,
+                      customer: invoice.customerName,
+                    });
+                    totalServices += 1;
+                    totalEarnings += item.price || 0;
+                  }
+                } catch (parseError) {
+                  console.warn("Error parsing staff data:", item.staff);
+                }
+              }
+            });
+          }
+        }
+      });
+
+      setWorkData({
+        services: workServices,
+        totalServices,
+        totalEarnings,
+      });
+    } catch (err) {
+      console.error("Error calculating work data:", err);
     }
   };
 
@@ -1019,6 +1091,150 @@ const StaffSalaryAnalytics = () => {
                   </table>
                 </div>
               </div>
+
+              {/* Work Data Section */}
+              {workData && workData.totalServices > 0 && (
+                <div className="card" style={{ marginTop: "1.5rem" }}>
+                  <div className="card-header">
+                    <h3 className="card-title">
+                      Services Performed This Month
+                    </h3>
+                  </div>
+                  <div className="card-content">
+                    <div
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "repeat(2, 1fr)",
+                        gap: "1rem",
+                        marginBottom: "1rem",
+                      }}
+                    >
+                      <div
+                        style={{
+                          padding: "1rem",
+                          background: "rgba(96, 165, 250, 0.1)",
+                          borderRadius: "0.5rem",
+                          border: "1px solid rgba(96, 165, 250, 0.2)",
+                        }}
+                      >
+                        <div
+                          style={{
+                            fontSize: "0.75rem",
+                            color: "var(--muted-foreground)",
+                            marginBottom: "0.5rem",
+                          }}
+                        >
+                          Total Services
+                        </div>
+                        <div
+                          style={{
+                            fontSize: "2rem",
+                            fontWeight: "700",
+                            color: "#3b82f6",
+                          }}
+                        >
+                          {workData.totalServices}
+                        </div>
+                      </div>
+                      <div
+                        style={{
+                          padding: "1rem",
+                          background: "rgba(16, 185, 129, 0.1)",
+                          borderRadius: "0.5rem",
+                          border: "1px solid rgba(16, 185, 129, 0.2)",
+                        }}
+                      >
+                        <div
+                          style={{
+                            fontSize: "0.75rem",
+                            color: "var(--muted-foreground)",
+                            marginBottom: "0.5rem",
+                          }}
+                        >
+                          Total Earnings
+                        </div>
+                        <div
+                          style={{
+                            fontSize: "2rem",
+                            fontWeight: "700",
+                            color: "#10b981",
+                          }}
+                        >
+                          {formatCurrency(workData.totalEarnings)}
+                        </div>
+                      </div>
+                    </div>
+
+                    {workData.services.length > 0 && (
+                      <div style={{ marginTop: "1rem" }}>
+                        <h4
+                          style={{
+                            margin: "0 0 1rem 0",
+                            fontSize: "0.9rem",
+                            fontWeight: "600",
+                          }}
+                        >
+                          Service Breakdown
+                        </h4>
+                        <div
+                          style={{
+                            maxHeight: "300px",
+                            overflowY: "auto",
+                          }}
+                        >
+                          {workData.services.map((service, i) => (
+                            <div
+                              key={i}
+                              style={{
+                                padding: "0.75rem",
+                                borderBottom:
+                                  i < workData.services.length - 1
+                                    ? "1px solid var(--glass-border)"
+                                    : "none",
+                                display: "flex",
+                                justifyContent: "space-between",
+                                alignItems: "center",
+                              }}
+                            >
+                              <div>
+                                <div
+                                  style={{
+                                    fontSize: "0.875rem",
+                                    fontWeight: "600",
+                                    color: "var(--foreground)",
+                                  }}
+                                >
+                                  {service.serviceName}
+                                </div>
+                                <div
+                                  style={{
+                                    fontSize: "0.75rem",
+                                    color: "var(--muted-foreground)",
+                                  }}
+                                >
+                                  {service.customer} •{" "}
+                                  {new Date(service.date).toLocaleDateString(
+                                    "en-IN",
+                                  )}
+                                </div>
+                              </div>
+                              <div
+                                style={{
+                                  fontWeight: "600",
+                                  color: "#10b981",
+                                  fontSize: "0.875rem",
+                                }}
+                              >
+                                {formatCurrency(service.amount)}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
