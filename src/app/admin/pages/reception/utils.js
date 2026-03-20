@@ -25,6 +25,17 @@ export const filterVisitsByStatus = (visits, activeSection, searchTerm) => {
     if (activeSection === "checkout" && v.status !== "READY_FOR_BILLING")
       return false;
     if (activeSection === "completed" && v.status !== "COMPLETED") return false;
+    if (activeSection === "today-completed") {
+      if (v.status !== "COMPLETED") return false;
+      // Filter by today's date
+      const visitDate = v.date?.seconds
+        ? new Date(v.date.seconds * 1000)
+        : new Date(v.date);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const tomorrow = new Date(today.getTime() + 86400000);
+      if (visitDate < today || visitDate >= tomorrow) return false;
+    }
 
     // Handle both customer object structure and appointment structure
     const customerName = v.customer?.name || v.customerName || v.name || "";

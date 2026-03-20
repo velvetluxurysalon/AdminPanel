@@ -562,75 +562,53 @@ const Services = () => {
                           borderRadius: "0.75rem",
                           padding: "1rem",
                           display: "flex",
-                          flexDirection: "column",
+                          flexDirection: "row",
                           gap: "0.75rem",
+                          alignItems: "flex-start",
                         }}
                         className="hover:border-purple-500/50 transition-colors"
                       >
-                        {/* Service Image */}
-                        <img
-                          src={
-                            service.image ||
-                            "https://via.placeholder.com/250?text=No+Image"
-                          }
-                          alt={service.name}
+                        {/* Edit Button - Left */}
+                        <button
+                          onClick={() => handleEditService(service)}
                           style={{
-                            width: "100%",
-                            height: "160px",
-                            borderRadius: "0.5rem",
-                            objectFit: "cover",
+                            background: "none",
+                            border: "none",
                             cursor: "pointer",
+                            color: "var(--primary)",
+                            opacity: 0.7,
+                            padding: "0.5rem",
+                            minWidth: "fit-content",
                           }}
-                          onError={(e) =>
-                            (e.currentTarget.src =
-                              "https://via.placeholder.com/250?text=No+Image")
-                          }
-                        />
+                          className="hover:opacity-100"
+                          title="Edit service"
+                        >
+                          <Edit2 size={18} />
+                        </button>
 
-                        {/* Service Info */}
-                        <div>
-                          <h4
-                            style={{
-                              fontWeight: "600",
-                              margin: "0 0 0.25rem 0",
-                              fontSize: "0.95rem",
-                            }}
-                          >
-                            {service.name}
-                          </h4>
-                          <p
-                            style={{
-                              margin: "0",
-                              fontSize: "0.85rem",
-                              color: "var(--muted-foreground)",
-                            }}
-                          >
-                            {service.description &&
-                              service.description.substring(0, 50)}
-                            {service.description &&
-                            service.description.length > 50
-                              ? "..."
-                              : ""}
-                          </p>
-                        </div>
-
-                        {/* Price & Duration */}
+                        {/* Service Info with Price */}
                         <div
                           style={{
                             display: "flex",
-                            justifyContent: "space-between",
-                            alignItems: "center",
-                            padding: "0.75rem 0",
-                            borderTop: "1px solid var(--glass-border)",
-                            borderBottom: "1px solid var(--glass-border)",
+                            gap: "1rem",
+                            minWidth: 0,
+                            flex: 1,
                           }}
                         >
-                          <div>
+                          <div
+                            style={{
+                              minWidth: "fit-content",
+                              display: "flex",
+                              flexDirection: "column",
+                              alignItems: "flex-start",
+                            }}
+                          >
                             <span
                               style={{
                                 fontSize: "0.75rem",
                                 color: "var(--muted-foreground)",
                                 display: "block",
+                                marginBottom: "0.25rem",
                               }}
                             >
                               Price
@@ -639,6 +617,7 @@ const Services = () => {
                               style={{
                                 fontWeight: "600",
                                 color: "var(--primary)",
+                                fontSize: "1rem",
                               }}
                             >
                               ₹
@@ -647,68 +626,54 @@ const Services = () => {
                                 : service.price}
                             </span>
                           </div>
-                          {service.duration && (
-                            <div style={{ textAlign: "right" }}>
-                              <span
-                                style={{
-                                  fontSize: "0.75rem",
-                                  color: "var(--muted-foreground)",
-                                  display: "block",
-                                }}
-                              >
-                                Duration
-                              </span>
-                              <span
-                                style={{
-                                  fontWeight: "600",
-                                  fontSize: "0.9rem",
-                                }}
-                              >
-                                {service.duration}m
-                              </span>
-                            </div>
-                          )}
+                          <div style={{ minWidth: 0, flex: 1 }}>
+                            <h4
+                              style={{
+                                fontWeight: "600",
+                                margin: "0 0 0.25rem 0",
+                                fontSize: "0.95rem",
+                                lineHeight: "1.4",
+                                whiteSpace: "normal",
+                              }}
+                            >
+                              {service.name}
+                            </h4>
+                            <p
+                              style={{
+                                margin: "0",
+                                fontSize: "0.85rem",
+                                color: "var(--muted-foreground)",
+                                lineHeight: "1.4",
+                                whiteSpace: "normal",
+                              }}
+                            >
+                              {service.description &&
+                                service.description.substring(0, 50)}
+                              {service.description &&
+                              service.description.length > 50
+                                ? "..."
+                                : ""}
+                            </p>
+                          </div>
                         </div>
 
-                        {/* Actions */}
-                        <div
+                        {/* Delete Button - Right */}
+                        <button
+                          onClick={() => handleDeleteService(service.id)}
                           style={{
-                            display: "flex",
-                            gap: "0.5rem",
-                            justifyContent: "flex-end",
+                            background: "none",
+                            border: "none",
+                            cursor: "pointer",
+                            color: "var(--danger)",
+                            opacity: 0.7,
+                            padding: "0.5rem",
+                            minWidth: "fit-content",
                           }}
+                          className="hover:opacity-100"
+                          title="Delete service"
                         >
-                          <button
-                            onClick={() => handleEditService(service)}
-                            style={{
-                              background: "none",
-                              border: "none",
-                              cursor: "pointer",
-                              color: "var(--primary)",
-                              opacity: 0.7,
-                              padding: "0.5rem",
-                            }}
-                            className="hover:opacity-100"
-                            title="Edit service"
-                          >
-                            <Edit2 size={18} />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteService(service.id)}
-                            style={{
-                              background: "none",
-                              border: "none",
-                              cursor: "pointer",
-                              color: "var(--danger)",
-                              opacity: 0.7,
-                              padding: "0.5rem",
-                            }}
-                            className="hover:opacity-100"
-                            title="Delete service"
-                          >
-                            <Trash2 size={18} />
-                          </button>
-                        </div>
+                          <Trash2 size={18} />
+                        </button>
                       </div>
                     ))}
                   </div>
@@ -755,69 +720,6 @@ const Services = () => {
                   gap: "1.5rem",
                 }}
               >
-                {/* Image Upload */}
-                <div>
-                  <label
-                    style={{
-                      display: "block",
-                      marginBottom: "0.5rem",
-                      fontSize: "0.875rem",
-                      fontWeight: "500",
-                      color: "var(--muted-foreground)",
-                    }}
-                  >
-                    Service Image
-                  </label>
-                  <div
-                    style={{
-                      display: "flex",
-                      gap: "1rem",
-                      alignItems: "flex-start",
-                    }}
-                  >
-                    <div>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleImageUpload}
-                        style={{ display: "none" }}
-                        id="image-upload"
-                        disabled={loading}
-                      />
-                      <label
-                        htmlFor="image-upload"
-                        style={{
-                          display: "inline-block",
-                          padding: "0.75rem 1.5rem",
-                          backgroundColor: "rgba(139, 92, 246, 0.1)",
-                          color: "var(--primary)",
-                          border: "1px solid var(--primary)",
-                          borderRadius: "0.375rem",
-                          cursor: loading ? "not-allowed" : "pointer",
-                          fontSize: "0.875rem",
-                          fontWeight: "500",
-                          opacity: loading ? 0.5 : 1,
-                        }}
-                      >
-                        Choose Image
-                      </label>
-                    </div>
-                    {imagePreview && (
-                      <img
-                        src={imagePreview}
-                        alt="Preview"
-                        style={{
-                          width: "100px",
-                          height: "100px",
-                          borderRadius: "0.375rem",
-                          objectFit: "cover",
-                          border: "1px solid var(--glass-border)",
-                        }}
-                      />
-                    )}
-                  </div>
-                </div>
-
                 <div>
                   <label
                     style={{
