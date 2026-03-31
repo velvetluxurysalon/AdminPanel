@@ -93,9 +93,14 @@ export const getDailyMetrics = async (date: Date): Promise<DailyMetrics> => {
     );
 
     const visitsSnap = await getDocs(visitsQuery);
-    const visits = visitsSnap.docs.map((doc) => doc.data() as any);
+    const allVisits = visitsSnap.docs.map((doc) => doc.data() as any);
 
-    // Calculate revenue metrics from visits
+    // Filter to only COMPLETED visits for accurate revenue tracking
+    const completedVisits = allVisits.filter(
+      (v: any) => v.status === "COMPLETED",
+    );
+
+    // Calculate revenue metrics ONLY from completed visits
     const paymentModes = {
       cash: 0,
       card: 0,
@@ -104,10 +109,8 @@ export const getDailyMetrics = async (date: Date): Promise<DailyMetrics> => {
     };
 
     let totalRevenue = 0;
-    let completedVisitCount = 0;
-    const completedVisits = visits.filter((v: any) => v.status === "COMPLETED");
 
-    visits.forEach((visit: any) => {
+    completedVisits.forEach((visit: any) => {
       const paidAmount = visit.paidAmount || visit.totalAmount || 0;
       totalRevenue += paidAmount;
 
@@ -117,9 +120,9 @@ export const getDailyMetrics = async (date: Date): Promise<DailyMetrics> => {
       }
     });
 
-    completedVisitCount = completedVisits.length;
+    const completedVisitCount = completedVisits.length;
 
-    const totalVisitDuration = visits.reduce(
+    const totalVisitDuration = completedVisits.reduce(
       (sum: number, v: any) =>
         sum +
         (v.items?.reduce(
@@ -136,12 +139,15 @@ export const getDailyMetrics = async (date: Date): Promise<DailyMetrics> => {
       cardRevenue: paymentModes.card,
       upiRevenue: paymentModes.upi,
       walletRevenue: paymentModes.wallet,
-      totalTransactions: visits.length,
-      totalInvoices: visits.length,
+      totalTransactions: completedVisits.length,
+      totalInvoices: completedVisits.length,
       completedVisits: completedVisitCount,
-      averageTransaction: visits.length > 0 ? totalRevenue / visits.length : 0,
+      averageTransaction:
+        completedVisits.length > 0 ? totalRevenue / completedVisits.length : 0,
       averageVisitDuration:
-        visits.length > 0 ? totalVisitDuration / visits.length : 0,
+        completedVisits.length > 0
+          ? totalVisitDuration / completedVisits.length
+          : 0,
     };
   } catch (error) {
     console.error("Error fetching daily metrics:", error);
@@ -185,7 +191,12 @@ export const getPaymentModeSplit = async (
     );
 
     const visitsSnap = await getDocs(visitsQuery);
-    const visits = visitsSnap.docs.map((doc) => doc.data() as any);
+    const allVisits = visitsSnap.docs.map((doc) => doc.data() as any);
+
+    // Filter to only COMPLETED visits for accurate revenue tracking
+    const completedVisits = allVisits.filter(
+      (v: any) => v.status === "COMPLETED",
+    );
 
     const split: PaymentModeSplit = {
       cash: { amount: 0, count: 0, percentage: 0 },
@@ -195,7 +206,7 @@ export const getPaymentModeSplit = async (
       total: 0,
     };
 
-    visits.forEach((visit: any) => {
+    completedVisits.forEach((visit: any) => {
       const mode = (visit.paymentMode?.toLowerCase() || "cash") as keyof Omit<
         PaymentModeSplit,
         "total"
@@ -239,11 +250,16 @@ export const getServiceAnalytics = async (
     );
 
     const visitsSnap = await getDocs(visitsQuery);
-    const visits = visitsSnap.docs.map((doc) => doc.data() as any);
+    const allVisits = visitsSnap.docs.map((doc) => doc.data() as any);
+
+    // Filter to only COMPLETED visits for accurate revenue tracking
+    const completedVisits = allVisits.filter(
+      (v: any) => v.status === "COMPLETED",
+    );
 
     const serviceMap = new Map<string, ServiceAnalytics>();
 
-    visits.forEach((visit: any) => {
+    completedVisits.forEach((visit: any) => {
       (visit.items || []).forEach((item: any) => {
         if (item.type === "service") {
           const key = item.serviceId || item.name;
@@ -299,18 +315,23 @@ export const getCustomerAnalytics = async (
     );
 
     const visitsSnap = await getDocs(visitsQuery);
-    const visits = visitsSnap.docs.map((doc) => doc.data() as any);
+    const allVisits = visitsSnap.docs.map((doc) => doc.data() as any);
+
+    // Filter to only COMPLETED visits for accurate revenue tracking
+    const completedVisits = allVisits.filter(
+      (v: any) => v.status === "COMPLETED",
+    );
 
     // All customers collection
     const customersSnap = await getDocs(collection(db, "customers"));
-    const allCustomers = customersSnap.docs.length;
+    const totalCustomersCount = customersSnap.docs.length;
 
     const customerMap = new Map<
       string,
       { name: string; spent: number; visits: number; lastVisit: Date }
     >();
 
-    visits.forEach((visit: any) => {
+    completedVisits.forEach((visit: any) => {
       const customerId = visit.customerId;
       const current = customerMap.get(customerId) || {
         name: visit.customer?.name || "Unknown",
@@ -326,7 +347,34 @@ export const getCustomerAnalytics = async (
       customerMap.set(customerId, current);
     });
 
+    // Get all customer visit history to identify new vs returning customers
+    const allCustomerVisitsQuery = query(collection(db, "visits"));
+    const allCustomerVisitsSnap = await getDocs(allCustomerVisitsQuery);
+    const allCustomerVisits = allCustomerVisitsSnap.docs
+      .map((doc) => doc.data() as any)
+      .filter((v: any) => v.status === "COMPLETED");
+
+    // Track customers who had visits BEFORE this period
+    const customersWithPriorVisits = new Set<string>();
+    allCustomerVisits.forEach((visit: any) => {
+      const visitDate = visit.date?.toDate?.() || new Date(visit.date);
+      if (visitDate < startDate) {
+        customersWithPriorVisits.add(visit.customerId);
+      }
+    });
+
     const uniqueCustomersInPeriod = customerMap.size;
+
+    // Calculate new customers (only in this period, no prior visits)
+    const newCustomersCount = Array.from(customerMap.keys()).filter(
+      (customerId) => !customersWithPriorVisits.has(customerId),
+    ).length;
+
+    // Calculate returning customers (had visits before this period)
+    const returningCustomersCount = Array.from(customerMap.keys()).filter(
+      (customerId) => customersWithPriorVisits.has(customerId),
+    ).length;
+
     let totalCustomerSpent = 0;
     const topCustomersList = Array.from(customerMap.entries())
       .map(([id, data]) => {
@@ -342,19 +390,22 @@ export const getCustomerAnalytics = async (
       .sort((a, b) => b.totalSpent - a.totalSpent)
       .slice(0, 10);
 
+    // Calculate repeat percentage correctly
+    const repeatCustomerPercentage =
+      uniqueCustomersInPeriod > 0
+        ? (returningCustomersCount / uniqueCustomersInPeriod) * 100
+        : 0;
+
     return {
-      totalCustomers: allCustomers,
-      newCustomers: uniqueCustomersInPeriod,
-      returningCustomers: Math.max(0, uniqueCustomersInPeriod - 1),
-      repeatCustomerPercentage:
-        uniqueCustomersInPeriod > 0
-          ? (Math.max(0, uniqueCustomersInPeriod - 1) /
-              uniqueCustomersInPeriod) *
-            100
-          : 0,
+      totalCustomers: totalCustomersCount,
+      newCustomers: newCustomersCount,
+      returningCustomers: returningCustomersCount,
+      repeatCustomerPercentage: parseFloat(repeatCustomerPercentage.toFixed(1)),
       totalCustomerSpent,
       averageCustomerLifetimeValue:
-        allCustomers > 0 ? totalCustomerSpent / allCustomers : 0,
+        totalCustomersCount > 0
+          ? parseFloat((totalCustomerSpent / totalCustomersCount).toFixed(2))
+          : 0,
       topCustomers: topCustomersList,
     };
   } catch (error) {
@@ -375,11 +426,16 @@ export const getStaffPerformance = async (
     );
 
     const visitsSnap = await getDocs(visitsQuery);
-    const visits = visitsSnap.docs.map((doc) => doc.data() as any);
+    const allVisits = visitsSnap.docs.map((doc) => doc.data() as any);
+
+    // Filter to only COMPLETED visits for accurate revenue tracking
+    const completedVisits = allVisits.filter(
+      (v: any) => v.status === "COMPLETED",
+    );
 
     const staffMap = new Map<string, StaffPerformance>();
 
-    visits.forEach((visit: any) => {
+    completedVisits.forEach((visit: any) => {
       (visit.items || []).forEach((item: any) => {
         if (item.staff) {
           // Handle both string and object formats for staff data
@@ -442,7 +498,12 @@ export const getHourlyAnalytics = async (
     );
 
     const visitsSnap = await getDocs(visitsQuery);
-    const visits = visitsSnap.docs.map((doc) => doc.data() as any);
+    const allVisits = visitsSnap.docs.map((doc) => doc.data() as any);
+
+    // Filter to only COMPLETED visits for accurate revenue tracking
+    const completedVisits = allVisits.filter(
+      (v: any) => v.status === "COMPLETED",
+    );
 
     const hourlyData = new Map<number, TimeslotAnalytics>();
 
@@ -458,8 +519,8 @@ export const getHourlyAnalytics = async (
       });
     }
 
-    // Populate with actual data
-    visits.forEach((visit: any) => {
+    // Populate with actual data from completed visits
+    completedVisits.forEach((visit: any) => {
       const visitDate = visit.date?.toDate?.() || new Date();
       const hour = visitDate.getHours();
       const data = hourlyData.get(hour)!;

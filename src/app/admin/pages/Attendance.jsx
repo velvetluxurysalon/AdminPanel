@@ -5,6 +5,7 @@ import {
   Loader,
   BarChart3,
   Calendar,
+  Download,
 } from "lucide-react";
 import {
   getStaff,
@@ -29,6 +30,8 @@ const Attendance = () => {
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
   const [liveWorkHours, setLiveWorkHours] = useState({});
   const [expandedStaff, setExpandedStaff] = useState({});
+  const [exportLoading, setExportLoading] = useState(false);
+  const [exportType, setExportType] = useState("csv"); // "csv" or "json"
 
   // Load staff and their punch status once
   useEffect(() => {
@@ -231,6 +234,182 @@ const Attendance = () => {
     }
   };
 
+  const exportToCSV = async () => {
+    try {
+      setExportLoading(true);
+      setError("");
+
+      // Prepare CSV headers
+      let csvContent = "data:text/csv;charset=utf-8,";
+
+      // Add metadata
+      csvContent += `Attendance Data Export\n`;
+      csvContent += `Exported on: ${new Date().toLocaleString()}\n`;
+      csvContent += `Month: ${analyticsMonth}\n\n`;
+
+      // Add staff attendance data
+      csvContent +=
+        "Staff Name,Position,Total Work Hours,Present Days,Absent Days\n";
+
+      // Collect all attendance data
+      const exportData = {};
+      await Promise.all(
+        staff.map(async (staffMember) => {
+          try {
+            const attendance = await getStaffAttendance(
+              staffMember.name,
+              analyticsMonth,
+              staffMember.id,
+            );
+
+            const totalWorkHours = Object.values(attendance || {}).reduce(
+              (sum, day) => sum + (day.workHours || 0),
+              0,
+            );
+            const presentDays = Object.values(attendance || {}).filter(
+              (day) => day.status === "present",
+            ).length;
+            const absentDays = Object.values(attendance || {}).filter(
+              (day) => day.status === "absent",
+            ).length;
+
+            exportData[staffMember.id] = {
+              name: staffMember.name,
+              position: staffMember.position,
+              totalWorkHours: totalWorkHours.toFixed(2),
+              presentDays,
+              absentDays,
+              dailyData: attendance || {},
+            };
+
+            csvContent += `"${staffMember.name}","${staffMember.position || "Staff Member"}",${totalWorkHours.toFixed(2)},${presentDays},${absentDays}\n`;
+          } catch (err) {
+            console.error(`Error exporting data for ${staffMember.name}:`, err);
+          }
+        }),
+      );
+
+      // Add detailed daily breakdown
+      csvContent += "\n\nDetailed Daily Breakdown\n";
+      csvContent += "Staff Name,Date,Work Hours,Status\n";
+
+      Object.entries(exportData).forEach(([staffId, data]) => {
+        Object.entries(data.dailyData)
+          .sort(([dateA], [dateB]) => dateB.localeCompare(dateA))
+          .forEach(([date, dayData]) => {
+            csvContent += `"${data.name}",${date},${(dayData.workHours || 0).toFixed(2)},"${dayData.status || "N/A"}"\n`;
+          });
+      });
+
+      // Download CSV
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+      link.setAttribute(
+        "download",
+        `attendance_${analyticsMonth}_${new Date().getTime()}.csv`,
+      );
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      setSuccess("Attendance data exported successfully!");
+      setTimeout(() => setSuccess(""), 3000);
+    } catch (err) {
+      console.error("Error exporting data:", err);
+      setError("Failed to export attendance data");
+      setTimeout(() => setError(""), 4000);
+    } finally {
+      setExportLoading(false);
+    }
+  };
+
+  const exportToJSON = async () => {
+    try {
+      setExportLoading(true);
+      setError("");
+
+      const exportData = {
+        metadata: {
+          exportedOn: new Date().toISOString(),
+          month: analyticsMonth,
+          totalStaff: staff.length,
+        },
+        staffAttendance: [],
+      };
+
+      // Collect all attendance data
+      await Promise.all(
+        staff.map(async (staffMember) => {
+          try {
+            const attendance = await getStaffAttendance(
+              staffMember.name,
+              analyticsMonth,
+              staffMember.id,
+            );
+
+            const totalWorkHours = Object.values(attendance || {}).reduce(
+              (sum, day) => sum + (day.workHours || 0),
+              0,
+            );
+            const presentDays = Object.values(attendance || {}).filter(
+              (day) => day.status === "present",
+            ).length;
+            const absentDays = Object.values(attendance || {}).filter(
+              (day) => day.status === "absent",
+            ).length;
+
+            exportData.staffAttendance.push({
+              id: staffMember.id,
+              name: staffMember.name,
+              position: staffMember.position,
+              summary: {
+                totalWorkHours: parseFloat(totalWorkHours.toFixed(2)),
+                presentDays,
+                absentDays,
+              },
+              dailyBreakdown: attendance || {},
+            });
+          } catch (err) {
+            console.error(`Error exporting JSON for ${staffMember.name}:`, err);
+          }
+        }),
+      );
+
+      // Download JSON
+      const jsonString = JSON.stringify(exportData, null, 2);
+      const blob = new Blob([jsonString], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute(
+        "download",
+        `attendance_${analyticsMonth}_${new Date().getTime()}.json`,
+      );
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      setSuccess("Attendance data exported successfully!");
+      setTimeout(() => setSuccess(""), 3000);
+    } catch (err) {
+      console.error("Error exporting JSON:", err);
+      setError("Failed to export attendance data");
+      setTimeout(() => setError(""), 4000);
+    } finally {
+      setExportLoading(false);
+    }
+  };
+
+  const handleExport = () => {
+    if (exportType === "csv") {
+      exportToCSV();
+    } else {
+      exportToJSON();
+    }
+  };
+
   const loadAnalytics = async () => {
     try {
       setAnalyticsLoading(true);
@@ -314,6 +493,8 @@ const Attendance = () => {
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
+          flexWrap: "wrap",
+          gap: "1rem",
         }}
       >
         <div className="attendance-header-top">
@@ -377,21 +558,81 @@ const Attendance = () => {
             </button>
           </div>
         </div>
-        <button
-          className="attendance-refresh-btn btn btn-secondary"
-          onClick={() => {
-            if (currentTab === "punch") {
-              refreshPunchStatus();
-            } else {
-              loadAnalytics();
-            }
+        <div
+          className="attendance-header-actions"
+          style={{
+            display: "flex",
+            gap: "1rem",
+            alignItems: "center",
+            flexWrap: "wrap",
           }}
-          style={{ padding: "0.75rem 1.5rem", fontWeight: "600" }}
         >
-          {analyticsLoading && currentTab === "analytics"
-            ? "Loading..."
-            : "Refresh"}
-        </button>
+          {currentTab === "analytics" && (
+            <>
+              {/* Export Format Selector */}
+              <select
+                value={exportType}
+                onChange={(e) => setExportType(e.target.value)}
+                disabled={exportLoading}
+                style={{
+                  padding: "0.5rem 1rem",
+                  background: "rgba(255,255,255,0.1)",
+                  border: "1px solid rgba(255,255,255,0.5)",
+                  color: "white",
+                  borderRadius: "6px",
+                  fontWeight: "600",
+                  cursor: exportLoading ? "not-allowed" : "pointer",
+                  opacity: exportLoading ? 0.6 : 1,
+                }}
+              >
+                <option value="csv" style={{ color: "black" }}>
+                  CSV
+                </option>
+                <option value="json" style={{ color: "black" }}>
+                  JSON
+                </option>
+              </select>
+
+              {/* Export Button */}
+              <button
+                className="attendance-export-btn btn btn-primary"
+                onClick={handleExport}
+                disabled={exportLoading || analyticsLoading}
+                style={{
+                  padding: "0.75rem 1.5rem",
+                  fontWeight: "600",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.5rem",
+                  opacity: exportLoading || analyticsLoading ? 0.6 : 1,
+                  cursor:
+                    exportLoading || analyticsLoading
+                      ? "not-allowed"
+                      : "pointer",
+                }}
+              >
+                <Download size={18} />
+                {exportLoading ? "Exporting..." : "Export"}
+              </button>
+            </>
+          )}
+
+          <button
+            className="attendance-refresh-btn btn btn-secondary"
+            onClick={() => {
+              if (currentTab === "punch") {
+                refreshPunchStatus();
+              } else {
+                loadAnalytics();
+              }
+            }}
+            style={{ padding: "0.75rem 1.5rem", fontWeight: "600" }}
+          >
+            {analyticsLoading && currentTab === "analytics"
+              ? "Loading..."
+              : "Refresh"}
+          </button>
+        </div>
       </div>
 
       {/* Punch Tab */}

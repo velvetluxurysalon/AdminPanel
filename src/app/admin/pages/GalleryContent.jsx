@@ -449,9 +449,8 @@ const GalleryContent = () => {
                   <textarea
                     className="input gallery-form-input"
                     style={{
-                      minHeight: "100px",
-                      resize: "vertical",
                       minHeight: "80px",
+                      resize: "vertical",
                     }}
                     value={formData.description}
                     onChange={(e) =>

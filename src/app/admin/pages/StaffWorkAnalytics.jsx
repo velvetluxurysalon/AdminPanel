@@ -286,7 +286,6 @@ const StaffWorkAnalytics = () => {
               onChange={(e) => setSearchTerm(e.target.value)}
               style={{
                 width: "100%",
-                paddingLeft: "2.25rem",
                 padding: "0.625rem 0.75rem",
                 paddingLeft: "2.25rem",
                 border: "1px solid #d1d5db",
